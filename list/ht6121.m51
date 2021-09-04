@@ -1,0 +1,365 @@
+BL51 BANKED LINKER/LOCATER V6.22                                                        08/27/2021  22:55:15  PAGE 1
+
+
+BL51 BANKED LINKER/LOCATER V6.22, INVOKED BY:
+C:\KEIL_V5\C51\BIN\BL51.EXE .\list\HT1621.obj TO .\list\ht6121 PRINT (.\list\ht6121.m51) RAMSIZE (256)
+
+
+MEMORY MODEL: SMALL
+
+
+INPUT MODULES INCLUDED:
+  .\list\HT1621.obj (HT1621)
+  C:\KEIL_V5\C51\LIB\C51S.LIB (?C_STARTUP)
+
+
+LINK MAP OF MODULE:  .\list\ht6121 (HT1621)
+
+
+            TYPE    BASE      LENGTH    RELOCATION   SEGMENT NAME
+            -----------------------------------------------------
+
+            * * * * * * *   D A T A   M E M O R Y   * * * * * * *
+            REG     0000H     0008H     ABSOLUTE     "REG BANK 0"
+            DATA    0008H     0008H     UNIT         ?DT?HT1621
+                    0010H     0010H                  *** GAP ***
+            BIT     0020H.0   0000H.5   UNIT         ?BI?HT1621
+                    0020H.5   0000H.3                *** GAP ***
+            IDATA   0021H     0001H     UNIT         ?STACK
+
+            * * * * * * *   C O D E   M E M O R Y   * * * * * * *
+            CODE    0000H     0003H     ABSOLUTE     
+                    0003H     0008H                  *** GAP ***
+            CODE    000BH     0003H     ABSOLUTE     
+                    000EH     07F2H                  *** GAP ***
+            CODE    0800H     007EH     UNIT         ?PR?IR_RX_HT6121?HT1621
+            CODE    087EH     002AH     UNIT         ?PR?_TX1SEND?HT1621
+            CODE    08A8H     0021H     UNIT         ?PR?_MOVESTEPBYCONTER?HT1621
+            CODE    08C9H     001BH     UNIT         ?PR?MAIN?HT1621
+            CODE    08E4H     0013H     UNIT         ?PR?TIMER0?HT1621
+            CODE    08F7H     0012H     UNIT         ?PR?RESET?HT1621
+            CODE    0909H     0012H     UNIT         ?PR?_HEX2ASCII?HT1621
+            CODE    091BH     0010H     UNIT         ?PR?INITTIMER?HT1621
+            CODE    092BH     0010H     UNIT         ?PR?_PRINTSTRING?HT1621
+            CODE    093BH     000FH     UNIT         ?PR?TOCONTER?HT1621
+            CODE    094AH     000EH     UNIT         ?PR?BITTIME?HT1621
+            CODE    0958H     000CH     UNIT         ?C_C51STARTUP
+            CODE    0964H     000AH     UNIT         ?PR?MOVESTEP?HT1621
+            CODE    096EH     0009H     UNIT         ?PR?DELAY5MS?HT1621
+            CODE    0977H     0008H     UNIT         ?PR?INTSTART?HT1621
+
+
+
+OVERLAY MAP OF MODULE:   .\list\ht6121 (HT1621)
+
+
+SEGMENT
+  +--> CALLED SEGMENT
+---------------------
+?PR?TIMER0?HT1621
+  +--> ?PR?IR_RX_HT6121?HT1621
+
+BL51 BANKED LINKER/LOCATER V6.22                                                      08/27/2021  22:55:15  PAGE 2
+
+
+*** NEW ROOT ***************************************************
+
+?C_C51STARTUP
+  +--> ?PR?MAIN?HT1621
+
+?PR?MAIN?HT1621
+  +--> ?PR?INITTIMER?HT1621
+  +--> ?PR?INTSTART?HT1621
+  +--> ?PR?_MOVESTEPBYCONTER?HT1621
+  +--> ?PR?RESET?HT1621
+
+?PR?_MOVESTEPBYCONTER?HT1621
+  +--> ?PR?MOVESTEP?HT1621
+
+?PR?MOVESTEP?HT1621
+  +--> ?PR?DELAY5MS?HT1621
+
+?PR?RESET?HT1621
+  +--> ?PR?DELAY5MS?HT1621
+
+
+
+SYMBOL TABLE OF MODULE:  .\list\ht6121 (HT1621)
+
+  VALUE           TYPE          NAME
+  ----------------------------------
+
+  -------         MODULE        HT1621
+  C:0000H         SYMBOL        _ICE_DUMMY_
+  D:0080H         PUBLIC        P0
+  D:00B0H         PUBLIC        P3
+  C:0909H         PUBLIC        _HEX2ASCII
+  C:08F7H         PUBLIC        Reset
+  B:00A8H.7       PUBLIC        EA
+  C:096EH         PUBLIC        Delay5ms
+  D:0008H         PUBLIC        IR_SampleCnt
+  C:087EH         PUBLIC        _Tx1Send
+  C:092BH         PUBLIC        _PrintString
+  D:0009H         PUBLIC        IR_DataShit
+  D:000AH         PUBLIC        IR_data
+  D:000BH         PUBLIC        IR_code
+  C:091BH         PUBLIC        InitTimer
+  C:08C9H         PUBLIC        main
+  B:0020H.0       PUBLIC        B_IrUserErr
+  B:0020H.1       PUBLIC        B_IR_Press
+  B:00B0H.1       PUBLIC        Enabled
+  C:094AH         PUBLIC        BitTime
+  C:093BH         PUBLIC        ToConter
+  D:0089H         PUBLIC        TMOD
+  C:0964H         PUBLIC        MoveStep
+  B:0020H.2       PUBLIC        B_IR_Sync
+  B:00B0H.3       PUBLIC        STEP
+  C:0977H         PUBLIC        IntStart
+  D:000CH         PUBLIC        IR_BitCnt
+  B:00A8H.1       PUBLIC        ET0
+  D:008CH         PUBLIC        TH0
+  D:008AH         PUBLIC        TL0
+BL51 BANKED LINKER/LOCATER V6.22                                                      08/27/2021  22:55:15  PAGE 3
+
+
+  B:0080H.1       PUBLIC        P_TXD1
+  C:08E4H         PUBLIC        timer0
+  B:00B0H.4       PUBLIC        P_IR_RX
+  B:0088H.4       PUBLIC        TR0
+  B:00B0H.2       PUBLIC        DIR
+  C:08B0H         PUBLIC        _MoveStepByConter
+  D:000DH         PUBLIC        IR_UserH
+  D:000EH         PUBLIC        IR_UserL
+  B:00B0H.5       PUBLIC        USB
+  C:0800H         PUBLIC        IR_RX_HT6121
+  D:000FH         PUBLIC        Conter
+  B:0020H.3       PUBLIC        P_IR_RX_temp
+  B:00B0H.0       PUBLIC        Senser
+  B:00D0H.5       PUBLIC        F0
+  B:0020H.4       PUBLIC        ConterStatus
+  -------         PROC          DELAY5MS
+  -------         DO            
+  D:0007H         SYMBOL        i
+  D:0006H         SYMBOL        j
+  -------         ENDDO         
+  C:096EH         LINE#         85
+  C:096EH         LINE#         86
+  C:096EH         LINE#         89
+  C:0970H         LINE#         90
+  C:0972H         LINE#         92
+  C:0972H         LINE#         93
+  C:0974H         LINE#         94
+  C:0976H         LINE#         95
+  -------         ENDPROC       DELAY5MS
+  -------         PROC          INTSTART
+  C:0977H         LINE#         100
+  C:0977H         LINE#         101
+  C:0979H         LINE#         102
+  C:097BH         LINE#         103
+  C:097EH         LINE#         104
+  -------         ENDPROC       INTSTART
+  -------         PROC          MOVESTEP
+  C:0964H         LINE#         106
+  C:0964H         LINE#         107
+  C:0966H         LINE#         108
+  C:0969H         LINE#         109
+  C:096BH         LINE#         110
+  -------         ENDPROC       MOVESTEP
+  -------         PROC          L?0061
+  -------         ENDPROC       L?0061
+  -------         PROC          _MOVESTEPBYCONTER
+  D:0002H         SYMBOL        cont
+  D:0004H         SYMBOL        dir
+  C:08B0H         LINE#         113
+  C:08B4H         LINE#         114
+  C:08BAH         LINE#         116
+  C:08BEH         LINE#         117
+  C:08C1H         LINE#         118
+  C:08C6H         LINE#         119
+  C:08C8H         LINE#         120
+  -------         ENDPROC       _MOVESTEPBYCONTER
+  -------         PROC          RESET
+BL51 BANKED LINKER/LOCATER V6.22                                                      08/27/2021  22:55:15  PAGE 4
+
+
+  C:08F7H         LINE#         122
+  C:08F7H         LINE#         123
+  C:08FAH         LINE#         124
+  C:08FCH         LINE#         125
+  C:08FEH         LINE#         126
+  C:0901H         LINE#         127
+  C:0903H         LINE#         128
+  C:0906H         LINE#         129
+  C:0908H         LINE#         131
+  -------         ENDPROC       RESET
+  -------         PROC          TOCONTER
+  -------         DO            
+  D:0001H         SYMBOL        i
+  -------         ENDDO         
+  C:093BH         LINE#         133
+  C:093BH         LINE#         134
+  C:093DH         LINE#         135
+  C:0943H         LINE#         136
+  C:0946H         LINE#         137
+  C:0949H         LINE#         138
+  -------         ENDPROC       TOCONTER
+  -------         PROC          MAIN
+  C:08C9H         LINE#         143
+  C:08C9H         LINE#         144
+  C:08C9H         LINE#         145
+  C:08CCH         LINE#         146
+  C:08CFH         LINE#         148
+  C:08CFH         LINE#         149
+  C:08CFH         LINE#         151
+  C:08D2H         LINE#         152
+  C:08D2H         LINE#         153
+  C:08D7H         LINE#         154
+  C:08DAH         LINE#         155
+  C:08DAH         LINE#         156
+  C:08DCH         LINE#         157
+  C:08DCH         LINE#         159
+  C:08DFH         LINE#         160
+  C:08E2H         LINE#         161
+  C:08E2H         LINE#         164
+  -------         ENDPROC       MAIN
+  -------         PROC          _HEX2ASCII
+  D:0007H         SYMBOL        dat
+  C:0909H         LINE#         169
+  C:0909H         LINE#         170
+  C:0909H         LINE#         171
+  C:090CH         LINE#         172
+  C:0917H         LINE#         173
+  C:091AH         LINE#         174
+  -------         ENDPROC       _HEX2ASCII
+  -------         PROC          IR_RX_HT6121
+  -------         DO            
+  D:0007H         SYMBOL        SampleTime
+  -------         ENDDO         
+  C:0800H         LINE#         214
+  C:0800H         LINE#         215
+  C:0800H         LINE#         218
+  C:0802H         LINE#         220
+BL51 BANKED LINKER/LOCATER V6.22                                                      08/27/2021  22:55:15  PAGE 5
+
+
+  C:0806H         LINE#         221
+  C:080AH         LINE#         222
+  C:0810H         LINE#         223
+  C:0810H         LINE#         224
+  C:0812H         LINE#         225
+  C:0815H         LINE#         227
+  C:081EH         LINE#         228
+  C:0824H         LINE#         229
+  C:0824H         LINE#         230
+  C:0829H         LINE#         231
+  C:0829H         LINE#         232
+  C:082BH         LINE#         233
+  C:082EH         LINE#         234
+  C:082EH         LINE#         235
+  C:082FH         LINE#         236
+  C:0832H         LINE#         237
+  C:0832H         LINE#         238
+  C:083BH         LINE#         240
+  C:083BH         LINE#         241
+  C:0841H         LINE#         242
+  C:084AH         LINE#         243
+  C:0850H         LINE#         244
+  C:0850H         LINE#         245
+  C:0852H         LINE#         246
+  C:0859H         LINE#         247
+  C:0859H         LINE#         248
+  C:0862H         LINE#         250
+  C:0866H         LINE#         251
+  C:0868H         LINE#         253
+  C:086BH         LINE#         254
+  C:086DH         LINE#         255
+  C:086DH         LINE#         256
+  C:086EH         LINE#         257
+  C:0874H         LINE#         258
+  C:0874H         LINE#         259
+  C:0877H         LINE#         260
+  C:087AH         LINE#         261
+  C:087DH         LINE#         262
+  C:087DH         LINE#         263
+  C:087DH         LINE#         264
+  C:087DH         LINE#         265
+  C:087DH         LINE#         266
+  -------         ENDPROC       IR_RX_HT6121
+  -------         PROC          INITTIMER
+  C:091BH         LINE#         270
+  C:091BH         LINE#         271
+  C:091BH         LINE#         272
+  C:091EH         LINE#         273
+  C:0921H         LINE#         274
+  C:0924H         LINE#         275
+  C:0926H         LINE#         276
+  C:0928H         LINE#         278
+  C:092AH         LINE#         279
+  -------         ENDPROC       INITTIMER
+  -------         PROC          TIMER0
+  C:08E4H         LINE#         283
+  C:08EDH         LINE#         285
+BL51 BANKED LINKER/LOCATER V6.22                                                      08/27/2021  22:55:15  PAGE 6
+
+
+  C:08F0H         LINE#         286
+  -------         ENDPROC       TIMER0
+  -------         PROC          BITTIME
+  -------         DO            
+  D:0006H         SYMBOL        i
+  -------         ENDDO         
+  C:094AH         LINE#         291
+  C:094AH         LINE#         292
+  C:094AH         LINE#         294
+  C:094EH         LINE#         295
+  C:0957H         LINE#         296
+  -------         ENDPROC       BITTIME
+  -------         PROC          _TX1SEND
+  D:0005H         SYMBOL        dat
+  -------         DO            
+  D:0004H         SYMBOL        i
+  -------         ENDDO         
+  C:087EH         LINE#         299
+  C:0880H         LINE#         300
+  C:0880H         LINE#         302
+  C:0882H         LINE#         303
+  C:0884H         LINE#         304
+  C:0887H         LINE#         305
+  C:0889H         LINE#         306
+  C:0889H         LINE#         307
+  C:0891H         LINE#         308
+  C:0893H         LINE#         309
+  C:0897H         LINE#         310
+  C:089AH         LINE#         311
+  C:089EH         LINE#         312
+  C:08A0H         LINE#         313
+  C:08A2H         LINE#         314
+  C:08A5H         LINE#         315
+  -------         ENDPROC       _TX1SEND
+  -------         PROC          _PRINTSTRING
+  D:0082H         SYMBOL        puts
+  C:092BH         LINE#         318
+  C:092FH         LINE#         319
+  C:092FH         LINE#         320
+  C:093AH         LINE#         321
+  -------         ENDPROC       _PRINTSTRING
+  -------         ENDMOD        HT1621
+
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?TOCONTER?HT1621
+
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?_HEX2ASCII?HT1621
+
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?_PRINTSTRING?HT1621
+
+******************************************************************************
+* RESTRICTED VERSION WITH 0800H BYTE CODE SIZE LIMIT; USED: 0176H BYTE (18%) *
+******************************************************************************
+
+Program Size: data=17.5 xdata=0 code=389
+BL51 BANKED LINKER/LOCATER V6.22                                                      08/27/2021  22:55:15  PAGE 7
+
+
+LINK/LOCATE RUN COMPLETE.  3 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,355 @@
+C51 COMPILER V9.53.0.0   HT1621                                                            08/27/2021 22:55:15 PAGE 1   
+
+
+C51 COMPILER V9.53.0.0, COMPILATION OF MODULE HT1621
+OBJECT MODULE PLACED IN .\list\HT1621.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE HT1621.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\list\HT1621
+                    -.lst) TABS(2) OBJECT(.\list\HT1621.obj)
+
+line level    source
+
+   1          
+   2          /*------------------------------------------------------------------*/
+   3          /* --- STC MCU International Limited -------------------------------*/
+   4          /* --- STC 1T Series MCU RC Demo -----------------------------------*/
+   5          /* --- Mobile: (86)13922805190 -------------------------------------*/
+   6          /* --- Fax: 86-755-82944243 ----------------------------------------*/
+   7          /* --- Tel: 86-755-82948412 ----------------------------------------*/
+   8          /* --- Web: www.STCMCU.com -----------------------------------------*/
+   9          /* If you want to use the program or the program referenced in the  */
+  10          /* article, please specify in which data and procedures from STC    */
+  11          /*------------------------------------------------------------------*/
+  12          
+  13          
+  14          /*************  功能说明  **************
+  15          
+  16          红外接收程序。适用于市场上用量最大的HT6121/6122及其兼容IC的编码。
+  17          
+  18          对于用户码与User_code定义不同的遥控器，程序会将用户码一起从串口输出。
+  19          
+  20          使用模拟串口发送监控显示编码，显示内容为ASCII码和中文。
+  21          
+  22          本接收程序基于状态机的方式，占用CPU的时间非常少。
+  23          
+  24          HEX文件在本目录的/list里面。
+  25          
+  26          ******************************************/
+  27          
+  28          
+  29          /*************  用户系统配置  **************/
+  30          
+  31          #define MAIN_Fosc   12000000L //定义主时钟, 模拟串口和红外接收会自动适应。5~36MHZ
+  32          
+  33          #define D_TIMER0    125     //选择定时器时间, us, 红外接收要求在60us~250us之间
+  34          
+  35          #define User_code   0xFF00    //定义红外接收用户码
+  36          
+  37          
+  38          /*************  以下宏定义用户请勿修改  **************/
+  39          #include  "reg51.H"
+  40          #define uchar unsigned char
+  41          #define uint  unsigned int
+  42          
+  43          #define freq_base     (MAIN_Fosc / 1200)
+  44          #define Timer0_Reload   (65536 - (D_TIMER0 * freq_base / 10000))
+  45          
+  46          
+  47          
+  48          
+  49          /*************  本地常量声明  **************/
+  50          #define StepConter 600
+  51          
+  52          /*************  本地变量声明  **************/
+  53          sbit  P_TXD1 = P0^1;    //定义模拟串口发送脚，打印信息用
+  54          sbit  P_IR_RX = P3^4;   //定义红外接收输入端口
+C51 COMPILER V9.53.0.0   HT1621                                                            08/27/2021 22:55:15 PAGE 2   
+
+  55          sbit    DIR = P3^2;
+  56          sbit  USB = P3^5;
+  57          sbit    Enabled = P3^1;
+  58          sbit  STEP = P3^3;
+  59          sbit    Senser = P3^0;
+  60          
+  61          
+  62          bit   P_IR_RX_temp;   //Last sample
+  63          bit   B_IR_Sync;      //已收到同步标志
+  64          uchar IR_SampleCnt;   //采样计数
+  65          uchar IR_BitCnt;      //编码位数
+  66          uchar IR_UserH;     //用户码(地址)高字节
+  67          uchar IR_UserL;     //用户码(地址)低字节
+  68          uchar IR_data;      //数据原码
+  69          uchar IR_DataShit;    //数据反码
+  70          
+  71          bit   B_IrUserErr;    //User code error flag
+  72          bit   B_IR_Press;     //Key press flag,include repeat key.
+  73          uchar IR_code;      //IR code 红外键码
+  74          
+  75          bit   ConterStatus;//计数器到位状态
+  76          uchar   Conter;
+  77          /*************  本地函数声明  **************/
+  78          void  Tx1Send(uchar dat);
+  79          uchar HEX2ASCII(uchar dat);
+  80          void  InitTimer(void);
+  81          void  PrintString(unsigned char code *puts);
+  82          
+  83          
+  84          /*************  自定函数 *********************/
+  85          void Delay5ms()   //@12.000MHz
+  86          {
+  87   1        unsigned char i, j;
+  88   1      
+  89   1        i = 10;
+  90   1        j = 183;
+  91   1        do
+  92   1        {
+  93   2          while (--j);
+  94   2        } while (--i);
+  95   1      }
+  96          
+  97          
+  98          
+  99          /*************  外部函数和变量声明 *****************/
+ 100          void IntStart(void){
+ 101   1        Enabled = 0;
+ 102   1        ConterStatus = 1;
+ 103   1        Conter = 10;
+ 104   1      }
+ 105          
+ 106          void MoveStep(void){
+ 107   1        STEP = 0;
+ 108   1        Delay5ms();
+ 109   1        STEP = 1;
+ 110   1        Delay5ms();
+ 111   1      }
+ 112          
+ 113          void MoveStepByConter(cont,dir){
+ 114   1        DIR = dir;
+ 115   1      
+ 116   1        while(cont){
+C51 COMPILER V9.53.0.0   HT1621                                                            08/27/2021 22:55:15 PAGE 3   
+
+ 117   2          MoveStep();
+ 118   2          cont--;
+ 119   2        }
+ 120   1      }
+ 121          
+ 122          void Reset(void){
+ 123   1        while(Senser){
+ 124   2          DIR = 0;
+ 125   2          STEP = 0;
+ 126   2          Delay5ms();
+ 127   2          STEP = 1;
+ 128   2          Delay5ms();
+ 129   2        }
+ 130   1        
+ 131   1      }
+ 132          
+ 133          void ToConter(void){
+ 134   1        uchar i = Conter;
+ 135   1        for(i=Conter; i>0;i--){
+ 136   2          MoveStepByConter(StepConter,1);
+ 137   2        }
+ 138   1      }
+ 139          
+ 140          //下一步开始写 按次数移动 1就调用一次move step by conter
+ 141          
+ 142          /********************* 主函数 *************************/
+ 143          void main(void)
+ 144          {
+ 145   1        InitTimer();    //初始化Timer
+ 146   1        IntStart();
+ 147   1      
+ 148   1        while(1)
+ 149   1        {
+ 150   2        
+ 151   2          if(B_IR_Press)    //有IR键按下
+ 152   2          {
+ 153   3          if(IR_code == 0x05){
+ 154   4            MoveStepByConter(StepConter,1);
+ 155   4          }
+ 156   3            B_IR_Press = 0;   //清除IR键按下标志
+ 157   3          }
+ 158   2      
+ 159   2          if(USB==1){
+ 160   3            Reset();
+ 161   3          }
+ 162   2          
+ 163   2      
+ 164   2        }
+ 165   1      }
+ 166          
+ 167          
+ 168          /********************* 十六进制转ASCII函数 *************************/
+ 169          uchar HEX2ASCII(uchar dat)
+ 170          {
+ 171   1        dat &= 0x0f;
+ 172   1        if(dat <= 9)  return (dat + '0'); //数字0~9
+ 173   1        return (dat - 10 + 'A');      //字母A~F
+ 174   1      }
+ 175          
+ 176          
+ 177          
+ 178          
+C51 COMPILER V9.53.0.0   HT1621                                                            08/27/2021 22:55:15 PAGE 4   
+
+ 179          //*******************************************************************
+ 180          //*********************** IR Remote Module **************************
+ 181          
+ 182          //*********************** IR Remote Module **************************
+ 183          //this programme is used for Receive IR Remote (HT6121).
+ 184          
+ 185          //data format: Synchro,AddressH,AddressL,data,/data, (total 32 bit).
+ 186          
+ 187          //send a frame(85ms), pause 23ms, send synchro of another frame, pause 94ms
+ 188          
+ 189          //data rate: 108ms/Frame
+ 190          
+ 191          
+ 192          //Synchro:low=9ms,high=4.5/2.25ms,low=0.5626ms
+ 193          //Bit0:high=0.5626ms,low=0.5626ms
+ 194          //Bit1:high=1.6879ms,low=0.5626ms
+ 195          //frame space = 23 ms or 96 ms
+ 196          
+ 197          /******************** 红外采样时间宏定义, 用户不要随意修改  *******************/
+ 198          
+ 199          #if ((D_TIMER0 <= 250) && (D_TIMER0 >= 60))
+ 200            #define D_IR_sample     D_TIMER0    //定义采样时间，在60us~250us之间
+ 201          #endif
+ 202          
+ 203          #define D_IR_SYNC_MAX   (15000/D_IR_sample) //SYNC max time
+ 204          #define D_IR_SYNC_MIN   (9700 /D_IR_sample) //SYNC min time
+ 205          #define D_IR_SYNC_DIVIDE  (12375/D_IR_sample) //decide data 0 or 1
+ 206          #define D_IR_DATA_MAX   (3000 /D_IR_sample) //data max time
+ 207          #define D_IR_DATA_MIN   (600  /D_IR_sample) //data min time
+ 208          #define D_IR_DATA_DIVIDE  (1687 /D_IR_sample) //decide data 0 or 1
+ 209          #define D_IR_BIT_NUMBER   32          //bit number
+ 210          
+ 211          //*******************************************************************************************
+ 212          //**************************** IR RECEIVE MODULE ********************************************
+ 213          
+ 214          void IR_RX_HT6121(void)
+ 215          {
+ 216   1        uchar SampleTime;
+ 217   1      
+ 218   1        IR_SampleCnt++;             //Sample + 1
+ 219   1      
+ 220   1        F0 = P_IR_RX_temp;            //Save Last sample status
+ 221   1        P_IR_RX_temp = P_IR_RX;         //Read current status
+ 222   1        if(F0 && !P_IR_RX_temp)         //Last sample is high，and current sample is low, so is fall edge
+ 223   1        {
+ 224   2          SampleTime = IR_SampleCnt;      //get the sample time
+ 225   2          IR_SampleCnt = 0;         //Clear the sample counter
+ 226   2      
+ 227   2             if(SampleTime > D_IR_SYNC_MAX)   B_IR_Sync = 0;  //large the Maxim SYNC time, then error
+ 228   2          else if(SampleTime >= D_IR_SYNC_MIN)          //SYNC
+ 229   2          {
+ 230   3            if(SampleTime >= D_IR_SYNC_DIVIDE)
+ 231   3            {
+ 232   4              B_IR_Sync = 1;          //has received SYNC
+ 233   4              IR_BitCnt = D_IR_BIT_NUMBER;  //Load bit number
+ 234   4            }
+ 235   3          }
+ 236   2          else if(B_IR_Sync)            //has received SYNC
+ 237   2          {
+ 238   3            if(SampleTime > D_IR_DATA_MAX)    B_IR_Sync=0;  //data samlpe time to large
+ 239   3            else
+ 240   3            {
+C51 COMPILER V9.53.0.0   HT1621                                                            08/27/2021 22:55:15 PAGE 5   
+
+ 241   4              IR_DataShit >>= 1;          //data shift right 1 bit
+ 242   4              if(SampleTime >= D_IR_DATA_DIVIDE)  IR_DataShit |= 0x80;  //devide data 0 or 1
+ 243   4              if(--IR_BitCnt == 0)        //bit number is over?
+ 244   4              {
+ 245   5                B_IR_Sync = 0;          //Clear SYNC
+ 246   5                if(~IR_DataShit == IR_data)   //判断数据正反码
+ 247   5                {
+ 248   6                  if((IR_UserH == (User_code / 256)) &&
+ 249   6                    IR_UserL == (User_code % 256))
+ 250   6                      B_IrUserErr = 0;  //User code is righe
+ 251   6                  else  B_IrUserErr = 1;  //user code is wrong
+ 252   6                    
+ 253   6                  IR_code      = IR_data;
+ 254   6                  B_IR_Press   = 1;     //数据有效
+ 255   6                }
+ 256   5              }
+ 257   4              else if((IR_BitCnt & 7)== 0)    //one byte receive
+ 258   4              {
+ 259   5                IR_UserL = IR_UserH;      //Save the User code high byte
+ 260   5                IR_UserH = IR_data;       //Save the User code low byte
+ 261   5                IR_data  = IR_DataShit;     //Save the IR data byte
+ 262   5              }
+ 263   4            }
+ 264   3          }
+ 265   2        }
+ 266   1      }
+ 267          
+ 268          
+ 269          /**************** Timer初始化函数 ******************************/
+ 270          void InitTimer(void)
+ 271          {
+ 272   1        TMOD = 0;   //for STC15Fxxx系列 Timer0 as 16bit reload timer.
+ 273   1        TH0 = Timer0_Reload / 256;
+ 274   1        TL0 = Timer0_Reload % 256;
+ 275   1        ET0 = 1;
+ 276   1        TR0 = 1;
+ 277   1      
+ 278   1        EA  = 1;
+ 279   1      }
+ 280          
+ 281          
+ 282          /********************** Timer0中断函数************************/
+ 283          void timer0 (void) interrupt 1
+ 284          {
+ 285   1        IR_RX_HT6121();
+ 286   1      }
+ 287          
+ 288          
+ 289          /********************** 模拟串口相关函数************************/
+ 290          
+ 291          void  BitTime(void) //位时间函数
+ 292          {
+ 293   1        uint i;
+ 294   1        i = ((MAIN_Fosc / 100) * 104) / 140000 - 1;   //根据主时钟来计算位时间
+ 295   1        while(--i);
+ 296   1      }
+ 297          
+ 298          //模拟串口发送
+ 299          void  Tx1Send(uchar dat)    //9600，N，8，1   发送一个字节
+ 300          {
+ 301   1        uchar i;
+ 302   1        EA = 0;
+C51 COMPILER V9.53.0.0   HT1621                                                            08/27/2021 22:55:15 PAGE 6   
+
+ 303   1        P_TXD1 = 0;
+ 304   1        BitTime();
+ 305   1        for(i=0; i<8; i++)
+ 306   1        {
+ 307   2          if(dat & 1)   P_TXD1 = 1;
+ 308   2          else      P_TXD1 = 0;
+ 309   2          dat >>= 1;
+ 310   2          BitTime();
+ 311   2        }
+ 312   1        P_TXD1 = 1;
+ 313   1        EA = 1;
+ 314   1        BitTime();
+ 315   1        BitTime();
+ 316   1      }
+ 317          
+ 318          void PrintString(unsigned char code *puts)    //发送一串字符串
+ 319          {
+ 320   1          for (; *puts != 0;  puts++)  Tx1Send(*puts);  //遇到停止符0结束
+ 321   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    371    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      8    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      5    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

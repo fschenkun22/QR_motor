@@ -1,0 +1,3 @@
+".\list\HT1621.obj" 
+TO ".\list\ht6121" 
+PRINT(".\list\ht6121.m51") RAMSIZE(256) 
