@@ -1,4 +1,4 @@
-C51 COMPILER V9.53.0.0   HT1621                                                            08/27/2021 22:55:15 PAGE 1   
+C51 COMPILER V9.53.0.0   HT1621                                                            09/07/2021 00:58:03 PAGE 1   
 
 
 C51 COMPILER V9.53.0.0, COMPILATION OF MODULE HT1621
@@ -62,293 +62,306 @@ line level    source
   52          /*************  本地变量声明  **************/
   53          sbit  P_TXD1 = P0^1;    //定义模拟串口发送脚，打印信息用
   54          sbit  P_IR_RX = P3^4;   //定义红外接收输入端口
-C51 COMPILER V9.53.0.0   HT1621                                                            08/27/2021 22:55:15 PAGE 2   
+C51 COMPILER V9.53.0.0   HT1621                                                            09/07/2021 00:58:03 PAGE 2   
 
   55          sbit    DIR = P3^2;
   56          sbit  USB = P3^5;
   57          sbit    Enabled = P3^1;
   58          sbit  STEP = P3^3;
   59          sbit    Senser = P3^0;
-  60          
+  60          bit   Setup;//是否进入配置模式
   61          
-  62          bit   P_IR_RX_temp;   //Last sample
-  63          bit   B_IR_Sync;      //已收到同步标志
-  64          uchar IR_SampleCnt;   //采样计数
-  65          uchar IR_BitCnt;      //编码位数
-  66          uchar IR_UserH;     //用户码(地址)高字节
-  67          uchar IR_UserL;     //用户码(地址)低字节
-  68          uchar IR_data;      //数据原码
-  69          uchar IR_DataShit;    //数据反码
-  70          
-  71          bit   B_IrUserErr;    //User code error flag
-  72          bit   B_IR_Press;     //Key press flag,include repeat key.
-  73          uchar IR_code;      //IR code 红外键码
-  74          
-  75          bit   ConterStatus;//计数器到位状态
-  76          uchar   Conter;
-  77          /*************  本地函数声明  **************/
-  78          void  Tx1Send(uchar dat);
-  79          uchar HEX2ASCII(uchar dat);
-  80          void  InitTimer(void);
-  81          void  PrintString(unsigned char code *puts);
-  82          
+  62          
+  63          bit   P_IR_RX_temp;   //Last sample
+  64          bit   B_IR_Sync;      //已收到同步标志
+  65          uchar IR_SampleCnt;   //采样计数
+  66          uchar IR_BitCnt;      //编码位数
+  67          uchar IR_UserH;     //用户码(地址)高字节
+  68          uchar IR_UserL;     //用户码(地址)低字节
+  69          uchar IR_data;      //数据原码
+  70          uchar IR_DataShit;    //数据反码
+  71          
+  72          bit   B_IrUserErr;    //User code error flag
+  73          bit   B_IR_Press;     //Key press flag,include repeat key.
+  74          uchar IR_code;      //IR code 红外键码
+  75          
+  76          bit   CounterStatus;//计数器到位状态
+  77          uchar   Counter;
+  78          /*************  本地函数声明  **************/
+  79          void  Tx1Send(uchar dat);
+  80          uchar HEX2ASCII(uchar dat);
+  81          void  InitTimer(void);
+  82          void  PrintString(unsigned char code *puts);
   83          
-  84          /*************  自定函数 *********************/
-  85          void Delay5ms()   //@12.000MHz
-  86          {
-  87   1        unsigned char i, j;
-  88   1      
-  89   1        i = 10;
-  90   1        j = 183;
-  91   1        do
-  92   1        {
-  93   2          while (--j);
-  94   2        } while (--i);
-  95   1      }
-  96          
+  84          
+  85          /*************  自定函数 *********************/
+  86          void Delay5ms()   //@12.000MHz
+  87          {
+  88   1        unsigned char i, j;
+  89   1      
+  90   1        i = 10;
+  91   1        j = 183;
+  92   1        do
+  93   1        {
+  94   2          while (--j);
+  95   2        } while (--i);
+  96   1      }
   97          
   98          
-  99          /*************  外部函数和变量声明 *****************/
- 100          void IntStart(void){
- 101   1        Enabled = 0;
- 102   1        ConterStatus = 1;
- 103   1        Conter = 10;
- 104   1      }
- 105          
- 106          void MoveStep(void){
- 107   1        STEP = 0;
- 108   1        Delay5ms();
- 109   1        STEP = 1;
+  99          
+ 100          /*************  外部函数和变量声明 *****************/
+ 101          void IntStart(void){
+ 102   1        Enabled = 0;
+ 103   1        CounterStatus = 1;
+ 104   1        Counter = 0;
+ 105   1        Setup = 0;
+ 106   1      }
+ 107          
+ 108          void MoveStep(void){
+ 109   1        STEP = 0;
  110   1        Delay5ms();
- 111   1      }
- 112          
- 113          void MoveStepByConter(cont,dir){
- 114   1        DIR = dir;
- 115   1      
- 116   1        while(cont){
-C51 COMPILER V9.53.0.0   HT1621                                                            08/27/2021 22:55:15 PAGE 3   
+ 111   1        STEP = 1;
+ 112   1        Delay5ms();
+ 113   1      }
+ 114          
+ 115          void MoveStepByCounter(cont,dir){
+ 116   1        DIR = dir;
+C51 COMPILER V9.53.0.0   HT1621                                                            09/07/2021 00:58:03 PAGE 3   
 
- 117   2          MoveStep();
- 118   2          cont--;
- 119   2        }
- 120   1      }
- 121          
- 122          void Reset(void){
- 123   1        while(Senser){
- 124   2          DIR = 0;
- 125   2          STEP = 0;
- 126   2          Delay5ms();
- 127   2          STEP = 1;
+ 117   1      
+ 118   1        while(cont){
+ 119   2          MoveStep();
+ 120   2          cont--;
+ 121   2        }
+ 122   1      }
+ 123          
+ 124          void Reset(void){
+ 125   1        while(Senser==0){
+ 126   2          DIR = 0;//往回移动
+ 127   2          STEP = 0;
  128   2          Delay5ms();
- 129   2        }
- 130   1        
- 131   1      }
- 132          
- 133          void ToConter(void){
- 134   1        uchar i = Conter;
- 135   1        for(i=Conter; i>0;i--){
- 136   2          MoveStepByConter(StepConter,1);
- 137   2        }
- 138   1      }
- 139          
- 140          //下一步开始写 按次数移动 1就调用一次move step by conter
+ 129   2          STEP = 1;
+ 130   2          Delay5ms();
+ 131   2        }
+ 132   1        //直到检测到传感器复位了
+ 133   1      }
+ 134          
+ 135          void ToCounter(void){
+ 136   1        uchar i = Counter;
+ 137   1        for(i=Counter; i>0;i--){
+ 138   2          MoveStepByCounter(StepConter,1);
+ 139   2        }
+ 140   1      }
  141          
- 142          /********************* 主函数 *************************/
- 143          void main(void)
- 144          {
- 145   1        InitTimer();    //初始化Timer
- 146   1        IntStart();
- 147   1      
- 148   1        while(1)
- 149   1        {
- 150   2        
- 151   2          if(B_IR_Press)    //有IR键按下
- 152   2          {
- 153   3          if(IR_code == 0x05){
- 154   4            MoveStepByConter(StepConter,1);
- 155   4          }
- 156   3            B_IR_Press = 0;   //清除IR键按下标志
- 157   3          }
- 158   2      
- 159   2          if(USB==1){
- 160   3            Reset();
- 161   3          }
- 162   2          
- 163   2      
- 164   2        }
- 165   1      }
- 166          
- 167          
- 168          /********************* 十六进制转ASCII函数 *************************/
- 169          uchar HEX2ASCII(uchar dat)
- 170          {
- 171   1        dat &= 0x0f;
- 172   1        if(dat <= 9)  return (dat + '0'); //数字0~9
- 173   1        return (dat - 10 + 'A');      //字母A~F
- 174   1      }
- 175          
- 176          
- 177          
- 178          
-C51 COMPILER V9.53.0.0   HT1621                                                            08/27/2021 22:55:15 PAGE 4   
+ 142          //下一步开始写 按次数移动 1就调用一次move step by conter
+ 143          
+ 144          /********************* 主函数 *************************/
+ 145          void main(void)
+ 146          {
+ 147   1        InitTimer();    //初始化Timer
+ 148   1        IntStart();
+ 149   1        //复位后检查是否按setup
+ 150   1        // if(B_IR_Press){
+ 151   1        //  if(IR_code == 0x46){
+ 152   1        //    Setup = 1;
+ 153   1        //    B_IR_Press = 0;   //清除IR键按下标志
+ 154   1        //    MoveStepByCounter(StepConter,1);
+ 155   1        //  }
+ 156   1        // }
+ 157   1      
+ 158   1        //配置模式 Setup为1一直保持在配置模式，配置模式不管USB状态
+ 159   1        while(1)
+ 160   1        {
+ 161   2            if(B_IR_Press)    //有IR键按下
+ 162   2          {
+ 163   3            if(IR_code == 0x46){
+ 164   4              IR_code = 0;
+ 165   4              // MoveStepByCounter(StepConter,1);
+ 166   4              B_IR_Press = 0;   //清除IR键按下标志
+ 167   4              Setup = 1;
+ 168   4              Reset();//进入配置前先复位
+ 169   4            }
+ 170   3      
+ 171   3            while (Setup) //进入配置模式，配置模式不检测USB
+ 172   3            {
+ 173   4            
+ 174   4              if(B_IR_Press){
+ 175   5      
+ 176   5                if(IR_code == 0x43){
+ 177   6                  IR_code = 0;
+ 178   6                  MoveStepByCounter(StepConter,1);
+C51 COMPILER V9.53.0.0   HT1621                                                            09/07/2021 00:58:03 PAGE 4   
 
- 179          //*******************************************************************
- 180          //*********************** IR Remote Module **************************
- 181          
- 182          //*********************** IR Remote Module **************************
- 183          //this programme is used for Receive IR Remote (HT6121).
- 184          
- 185          //data format: Synchro,AddressH,AddressL,data,/data, (total 32 bit).
- 186          
- 187          //send a frame(85ms), pause 23ms, send synchro of another frame, pause 94ms
- 188          
- 189          //data rate: 108ms/Frame
- 190          
- 191          
- 192          //Synchro:low=9ms,high=4.5/2.25ms,low=0.5626ms
- 193          //Bit0:high=0.5626ms,low=0.5626ms
- 194          //Bit1:high=1.6879ms,low=0.5626ms
- 195          //frame space = 23 ms or 96 ms
- 196          
- 197          /******************** 红外采样时间宏定义, 用户不要随意修改  *******************/
- 198          
- 199          #if ((D_TIMER0 <= 250) && (D_TIMER0 >= 60))
- 200            #define D_IR_sample     D_TIMER0    //定义采样时间，在60us~250us之间
- 201          #endif
- 202          
- 203          #define D_IR_SYNC_MAX   (15000/D_IR_sample) //SYNC max time
- 204          #define D_IR_SYNC_MIN   (9700 /D_IR_sample) //SYNC min time
- 205          #define D_IR_SYNC_DIVIDE  (12375/D_IR_sample) //decide data 0 or 1
- 206          #define D_IR_DATA_MAX   (3000 /D_IR_sample) //data max time
- 207          #define D_IR_DATA_MIN   (600  /D_IR_sample) //data min time
- 208          #define D_IR_DATA_DIVIDE  (1687 /D_IR_sample) //decide data 0 or 1
- 209          #define D_IR_BIT_NUMBER   32          //bit number
- 210          
- 211          //*******************************************************************************************
- 212          //**************************** IR RECEIVE MODULE ********************************************
- 213          
- 214          void IR_RX_HT6121(void)
- 215          {
- 216   1        uchar SampleTime;
- 217   1      
- 218   1        IR_SampleCnt++;             //Sample + 1
- 219   1      
- 220   1        F0 = P_IR_RX_temp;            //Save Last sample status
- 221   1        P_IR_RX_temp = P_IR_RX;         //Read current status
- 222   1        if(F0 && !P_IR_RX_temp)         //Last sample is high，and current sample is low, so is fall edge
- 223   1        {
- 224   2          SampleTime = IR_SampleCnt;      //get the sample time
- 225   2          IR_SampleCnt = 0;         //Clear the sample counter
- 226   2      
- 227   2             if(SampleTime > D_IR_SYNC_MAX)   B_IR_Sync = 0;  //large the Maxim SYNC time, then error
- 228   2          else if(SampleTime >= D_IR_SYNC_MIN)          //SYNC
- 229   2          {
- 230   3            if(SampleTime >= D_IR_SYNC_DIVIDE)
- 231   3            {
- 232   4              B_IR_Sync = 1;          //has received SYNC
- 233   4              IR_BitCnt = D_IR_BIT_NUMBER;  //Load bit number
- 234   4            }
- 235   3          }
- 236   2          else if(B_IR_Sync)            //has received SYNC
- 237   2          {
- 238   3            if(SampleTime > D_IR_DATA_MAX)    B_IR_Sync=0;  //data samlpe time to large
- 239   3            else
- 240   3            {
-C51 COMPILER V9.53.0.0   HT1621                                                            08/27/2021 22:55:15 PAGE 5   
+ 179   6                  B_IR_Press = 0;   //清除IR键按下标志
+ 180   6                  Counter++;//将来加上counter最大值
+ 181   6                }
+ 182   5      
+ 183   5                if(IR_code == 0x40){
+ 184   6                  IR_code = 0;
+ 185   6                  MoveStepByCounter(StepConter,0);
+ 186   6                  B_IR_Press = 0;   //清除IR键按下标志
+ 187   6                  Counter--;//注意这里应该限制负值！！！
+ 188   6                }
+ 189   5      
+ 190   5                if(IR_code == 0x46){
+ 191   6                  IR_code = 0;
+ 192   6                  B_IR_Press = 0;   //清除IR键按下标志
+ 193   6                  Setup = 0;
+ 194   6                  //如果是46 证明按下的是mode按键，准备退出配置
+ 195   6      
+ 196   6                  //退出前保存counter
+ 197   6      
+ 198   6                  //退出前运行复位
+ 199   6                  Reset();
+ 200   6                }
+ 201   5      
+ 202   5              }
+ 203   4            }
+ 204   3      
+ 205   3          }
+ 206   2      
+ 207   2          //接下来判断USB，也就是正常工作模式，USB如果为0 说明插入设备，就运行到counter，如果设备为1，就复位等待
+ 208   2          if (USB==0)
+ 209   2          {
+ 210   3            ToCounter();
+ 211   3            while (USB==0)
+ 212   3            {
+ 213   4              //原地等待 
+ 214   4            }
+ 215   3          }
+ 216   2      
+ 217   2          Reset();
+ 218   2      
+ 219   2      
+ 220   2      
+ 221   2        }
+ 222   1      }
+ 223          
+ 224          
+ 225          //*******************************************************************
+ 226          //*********************** IR Remote Module **************************
+ 227          
+ 228          //*********************** IR Remote Module **************************
+ 229          //this programme is used for Receive IR Remote (HT6121).
+ 230          
+ 231          //data format: Synchro,AddressH,AddressL,data,/data, (total 32 bit).
+ 232          
+ 233          //send a frame(85ms), pause 23ms, send synchro of another frame, pause 94ms
+ 234          
+ 235          //data rate: 108ms/Frame
+ 236          
+ 237          
+ 238          //Synchro:low=9ms,high=4.5/2.25ms,low=0.5626ms
+ 239          //Bit0:high=0.5626ms,low=0.5626ms
+ 240          //Bit1:high=1.6879ms,low=0.5626ms
+C51 COMPILER V9.53.0.0   HT1621                                                            09/07/2021 00:58:03 PAGE 5   
 
- 241   4              IR_DataShit >>= 1;          //data shift right 1 bit
- 242   4              if(SampleTime >= D_IR_DATA_DIVIDE)  IR_DataShit |= 0x80;  //devide data 0 or 1
- 243   4              if(--IR_BitCnt == 0)        //bit number is over?
- 244   4              {
- 245   5                B_IR_Sync = 0;          //Clear SYNC
- 246   5                if(~IR_DataShit == IR_data)   //判断数据正反码
- 247   5                {
- 248   6                  if((IR_UserH == (User_code / 256)) &&
- 249   6                    IR_UserL == (User_code % 256))
- 250   6                      B_IrUserErr = 0;  //User code is righe
- 251   6                  else  B_IrUserErr = 1;  //user code is wrong
- 252   6                    
- 253   6                  IR_code      = IR_data;
- 254   6                  B_IR_Press   = 1;     //数据有效
- 255   6                }
- 256   5              }
- 257   4              else if((IR_BitCnt & 7)== 0)    //one byte receive
- 258   4              {
- 259   5                IR_UserL = IR_UserH;      //Save the User code high byte
- 260   5                IR_UserH = IR_data;       //Save the User code low byte
- 261   5                IR_data  = IR_DataShit;     //Save the IR data byte
- 262   5              }
- 263   4            }
- 264   3          }
- 265   2        }
- 266   1      }
- 267          
- 268          
- 269          /**************** Timer初始化函数 ******************************/
- 270          void InitTimer(void)
- 271          {
- 272   1        TMOD = 0;   //for STC15Fxxx系列 Timer0 as 16bit reload timer.
- 273   1        TH0 = Timer0_Reload / 256;
- 274   1        TL0 = Timer0_Reload % 256;
- 275   1        ET0 = 1;
- 276   1        TR0 = 1;
- 277   1      
- 278   1        EA  = 1;
- 279   1      }
- 280          
- 281          
- 282          /********************** Timer0中断函数************************/
- 283          void timer0 (void) interrupt 1
- 284          {
- 285   1        IR_RX_HT6121();
- 286   1      }
- 287          
- 288          
- 289          /********************** 模拟串口相关函数************************/
- 290          
- 291          void  BitTime(void) //位时间函数
- 292          {
- 293   1        uint i;
- 294   1        i = ((MAIN_Fosc / 100) * 104) / 140000 - 1;   //根据主时钟来计算位时间
- 295   1        while(--i);
- 296   1      }
- 297          
- 298          //模拟串口发送
- 299          void  Tx1Send(uchar dat)    //9600，N，8，1   发送一个字节
- 300          {
- 301   1        uchar i;
- 302   1        EA = 0;
-C51 COMPILER V9.53.0.0   HT1621                                                            08/27/2021 22:55:15 PAGE 6   
+ 241          //frame space = 23 ms or 96 ms
+ 242          
+ 243          /******************** 红外采样时间宏定义, 用户不要随意修改  *******************/
+ 244          
+ 245          #if ((D_TIMER0 <= 250) && (D_TIMER0 >= 60))
+ 246            #define D_IR_sample     D_TIMER0    //定义采样时间，在60us~250us之间
+ 247          #endif
+ 248          
+ 249          #define D_IR_SYNC_MAX   (15000/D_IR_sample) //SYNC max time
+ 250          #define D_IR_SYNC_MIN   (9700 /D_IR_sample) //SYNC min time
+ 251          #define D_IR_SYNC_DIVIDE  (12375/D_IR_sample) //decide data 0 or 1
+ 252          #define D_IR_DATA_MAX   (3000 /D_IR_sample) //data max time
+ 253          #define D_IR_DATA_MIN   (600  /D_IR_sample) //data min time
+ 254          #define D_IR_DATA_DIVIDE  (1687 /D_IR_sample) //decide data 0 or 1
+ 255          #define D_IR_BIT_NUMBER   32          //bit number
+ 256          
+ 257          //*******************************************************************************************
+ 258          //**************************** IR RECEIVE MODULE ********************************************
+ 259          
+ 260          void IR_RX_HT6121(void)
+ 261          {
+ 262   1        uchar SampleTime;
+ 263   1      
+ 264   1        IR_SampleCnt++;             //Sample + 1
+ 265   1      
+ 266   1        F0 = P_IR_RX_temp;            //Save Last sample status
+ 267   1        P_IR_RX_temp = P_IR_RX;         //Read current status
+ 268   1        if(F0 && !P_IR_RX_temp)         //Last sample is high，and current sample is low, so is fall edge
+ 269   1        {
+ 270   2          SampleTime = IR_SampleCnt;      //get the sample time
+ 271   2          IR_SampleCnt = 0;         //Clear the sample counter
+ 272   2      
+ 273   2             if(SampleTime > D_IR_SYNC_MAX)   B_IR_Sync = 0;  //large the Maxim SYNC time, then error
+ 274   2          else if(SampleTime >= D_IR_SYNC_MIN)          //SYNC
+ 275   2          {
+ 276   3            if(SampleTime >= D_IR_SYNC_DIVIDE)
+ 277   3            {
+ 278   4              B_IR_Sync = 1;          //has received SYNC
+ 279   4              IR_BitCnt = D_IR_BIT_NUMBER;  //Load bit number
+ 280   4            }
+ 281   3          }
+ 282   2          else if(B_IR_Sync)            //has received SYNC
+ 283   2          {
+ 284   3            if(SampleTime > D_IR_DATA_MAX)    B_IR_Sync=0;  //data samlpe time to large
+ 285   3            else
+ 286   3            {
+ 287   4              IR_DataShit >>= 1;          //data shift right 1 bit
+ 288   4              if(SampleTime >= D_IR_DATA_DIVIDE)  IR_DataShit |= 0x80;  //devide data 0 or 1
+ 289   4              if(--IR_BitCnt == 0)        //bit number is over?
+ 290   4              {
+ 291   5                B_IR_Sync = 0;          //Clear SYNC
+ 292   5                if(~IR_DataShit == IR_data)   //判断数据正反码
+ 293   5                {
+ 294   6                  if((IR_UserH == (User_code / 256)) &&
+ 295   6                    IR_UserL == (User_code % 256))
+ 296   6                      B_IrUserErr = 0;  //User code is righe
+ 297   6                  else  B_IrUserErr = 1;  //user code is wrong
+ 298   6                    
+ 299   6                  IR_code      = IR_data;
+ 300   6                  B_IR_Press   = 1;     //数据有效
+ 301   6                }
+ 302   5              }
+C51 COMPILER V9.53.0.0   HT1621                                                            09/07/2021 00:58:03 PAGE 6   
 
- 303   1        P_TXD1 = 0;
- 304   1        BitTime();
- 305   1        for(i=0; i<8; i++)
- 306   1        {
- 307   2          if(dat & 1)   P_TXD1 = 1;
- 308   2          else      P_TXD1 = 0;
- 309   2          dat >>= 1;
- 310   2          BitTime();
+ 303   4              else if((IR_BitCnt & 7)== 0)    //one byte receive
+ 304   4              {
+ 305   5                IR_UserL = IR_UserH;      //Save the User code high byte
+ 306   5                IR_UserH = IR_data;       //Save the User code low byte
+ 307   5                IR_data  = IR_DataShit;     //Save the IR data byte
+ 308   5              }
+ 309   4            }
+ 310   3          }
  311   2        }
- 312   1        P_TXD1 = 1;
- 313   1        EA = 1;
- 314   1        BitTime();
- 315   1        BitTime();
- 316   1      }
- 317          
- 318          void PrintString(unsigned char code *puts)    //发送一串字符串
- 319          {
- 320   1          for (; *puts != 0;  puts++)  Tx1Send(*puts);  //遇到停止符0结束
- 321   1      }
+ 312   1      }
+ 313          
+ 314          
+ 315          /**************** Timer初始化函数 ******************************/
+ 316          void InitTimer(void)
+ 317          {
+ 318   1        TMOD = 0;   //for STC15Fxxx系列 Timer0 as 16bit reload timer.
+ 319   1        TH0 = Timer0_Reload / 256;
+ 320   1        TL0 = Timer0_Reload % 256;
+ 321   1        ET0 = 1;
+ 322   1        TR0 = 1;
+ 323   1      
+ 324   1        EA  = 1;
+ 325   1      }
+ 326          
+ 327          
+ 328          /********************** Timer0中断函数************************/
+ 329          void timer0 (void) interrupt 1
+ 330          {
+ 331   1        IR_RX_HT6121();
+ 332   1      }
+ 333          
+ 334          
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    371    ----
+   CODE SIZE        =    349    ----
    CONSTANT SIZE    =   ----    ----
    XDATA SIZE       =   ----    ----
    PDATA SIZE       =   ----    ----
    DATA SIZE        =      8    ----
    IDATA SIZE       =   ----    ----
-   BIT SIZE         =      5    ----
+   BIT SIZE         =      6    ----
 END OF MODULE INFORMATION.
 
 

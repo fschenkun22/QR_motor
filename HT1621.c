@@ -57,6 +57,7 @@ sbit 	USB = P3^5;
 sbit    Enabled = P3^1;
 sbit 	STEP = P3^3;
 sbit  	Senser = P3^0;
+bit  	Setup;//是否进入配置模式
 
 
 bit		P_IR_RX_temp;		//Last sample
@@ -72,8 +73,8 @@ bit		B_IrUserErr;		//User code error flag
 bit		B_IR_Press;			//Key press flag,include repeat key.
 uchar	IR_code;			//IR code	红外键码
 
-bit 	ConterStatus;//计数器到位状态
-uchar 	Conter;
+bit 	CounterStatus;//计数器到位状态
+uchar 	Counter;
 /*************	本地函数声明	**************/
 void	Tx1Send(uchar dat);
 uchar	HEX2ASCII(uchar dat);
@@ -99,8 +100,9 @@ void Delay5ms()		//@12.000MHz
 /*************  外部函数和变量声明 *****************/
 void IntStart(void){
 	Enabled = 0;
-	ConterStatus = 1;
-	Conter = 10;
+	CounterStatus = 1;
+	Counter = 0;
+	Setup = 0;
 }
 
 void MoveStep(void){
@@ -110,7 +112,7 @@ void MoveStep(void){
 	Delay5ms();
 }
 
-void MoveStepByConter(cont,dir){
+void MoveStepByCounter(cont,dir){
 	DIR = dir;
 
 	while(cont){
@@ -120,20 +122,20 @@ void MoveStepByConter(cont,dir){
 }
 
 void Reset(void){
-	while(Senser){
-		DIR = 0;
+	while(Senser==0){
+		DIR = 0;//往回移动
 		STEP = 0;
 		Delay5ms();
 		STEP = 1;
 		Delay5ms();
 	}
-	
+	//直到检测到传感器复位了
 }
 
-void ToConter(void){
-	uchar i = Conter;
-	for(i=Conter; i>0;i--){
-		MoveStepByConter(StepConter,1);
+void ToCounter(void){
+	uchar i = Counter;
+	for(i=Counter; i>0;i--){
+		MoveStepByCounter(StepConter,1);
 	}
 }
 
@@ -144,36 +146,80 @@ void main(void)
 {
 	InitTimer();		//初始化Timer
 	IntStart();
+	//复位后检查是否按setup
+	// if(B_IR_Press){
+	// 	if(IR_code == 0x46){
+	// 		Setup = 1;
+	// 		B_IR_Press = 0;		//清除IR键按下标志
+	// 		MoveStepByCounter(StepConter,1);
+	// 	}
+	// }
 
+	//配置模式 Setup为1一直保持在配置模式，配置模式不管USB状态
 	while(1)
 	{
-	
-		if(B_IR_Press)		//有IR键按下
+	    if(B_IR_Press)		//有IR键按下
 		{
-		if(IR_code == 0x05){
-			MoveStepByConter(StepConter,1);
-		}
-			B_IR_Press = 0;		//清除IR键按下标志
+			if(IR_code == 0x46){
+				IR_code = 0;
+				// MoveStepByCounter(StepConter,1);
+				B_IR_Press = 0;		//清除IR键按下标志
+				Setup = 1;
+				Reset();//进入配置前先复位
+			}
+
+			while (Setup) //进入配置模式，配置模式不检测USB
+			{
+			
+				if(B_IR_Press){
+
+					if(IR_code == 0x43){
+						IR_code = 0;
+						MoveStepByCounter(StepConter,1);
+						B_IR_Press = 0;		//清除IR键按下标志
+						Counter++;//将来加上counter最大值
+					}
+
+					if(IR_code == 0x40){
+						IR_code = 0;
+						MoveStepByCounter(StepConter,0);
+						B_IR_Press = 0;		//清除IR键按下标志
+						Counter--;//注意这里应该限制负值！！！
+					}
+
+					if(IR_code == 0x46){
+						IR_code = 0;
+						B_IR_Press = 0;		//清除IR键按下标志
+						Setup = 0;
+						//如果是46 证明按下的是mode按键，准备退出配置
+
+						//退出前保存counter
+
+						//退出前运行复位
+						Reset();
+					}
+
+				}
+			}
+
 		}
 
-		if(USB==1){
-			Reset();
+		//接下来判断USB，也就是正常工作模式，USB如果为0 说明插入设备，就运行到counter，如果设备为1，就复位等待
+		if (USB==0)
+		{
+			ToCounter();
+			while (USB==0)
+			{
+				//原地等待 
+			}
 		}
-		
+
+		Reset();
+
+
 
 	}
 }
-
-
-/********************* 十六进制转ASCII函数 *************************/
-uchar	HEX2ASCII(uchar dat)
-{
-	dat &= 0x0f;
-	if(dat <= 9)	return (dat + '0');	//数字0~9
-	return (dat - 10 + 'A');			//字母A~F
-}
-
-
 
 
 //*******************************************************************
@@ -286,36 +332,3 @@ void timer0 (void) interrupt 1
 }
 
 
-/********************** 模拟串口相关函数************************/
-
-void	BitTime(void)	//位时间函数
-{
-	uint i;
-	i = ((MAIN_Fosc / 100) * 104) / 140000 - 1;		//根据主时钟来计算位时间
-	while(--i);
-}
-
-//模拟串口发送
-void	Tx1Send(uchar dat)		//9600，N，8，1		发送一个字节
-{
-	uchar	i;
-	EA = 0;
-	P_TXD1 = 0;
-	BitTime();
-	for(i=0; i<8; i++)
-	{
-		if(dat & 1)		P_TXD1 = 1;
-		else			P_TXD1 = 0;
-		dat >>= 1;
-		BitTime();
-	}
-	P_TXD1 = 1;
-	EA = 1;
-	BitTime();
-	BitTime();
-}
-
-void PrintString(unsigned char code *puts)		//发送一串字符串
-{
-    for (; *puts != 0;	puts++)  Tx1Send(*puts); 	//遇到停止符0结束
-}
