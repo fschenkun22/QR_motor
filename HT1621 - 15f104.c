@@ -51,9 +51,9 @@ HEX文件在本目录的/list里面。
 
 /*************	本地变量声明	**************/
 sbit	P_TXD1 = P0^1;		//定义模拟串口发送脚，打印信息用
-sbit	P_IR_RX = P5^4;		//定义红外接收输入端口
+sbit	P_IR_RX = P3^4;		//定义红外接收输入端口
 sbit    DIR = P3^2;
-sbit 	USB = P5^5;
+sbit 	USB = P3^5;
 sbit    Enabled = P3^1;
 sbit 	STEP = P3^3;
 sbit  	Senser = P3^0;
@@ -99,10 +99,6 @@ void Delay5ms()		//@12.000MHz
 
 /*************  外部函数和变量声明 *****************/
 void IntStart(void){
-	P5M0 = 0;
-	P5M1 = 0;
-	P3M0 = 0;
-	P3M1 = 0;
 	Enabled = 0;
 	CounterStatus = 1;
 	Counter = 0;
@@ -211,8 +207,6 @@ void main(void)
 		//接下来判断USB，也就是正常工作模式，USB如果为0 说明插入设备，就运行到counter，如果设备为1，就复位等待
 		if (USB==0)
 		{
-			//如果USB接触不良，马上断开再接通可能出现继续出仓，所以应该加上强制复位后再出仓
-			Reset();
 			ToCounter();
 			while (USB==0)
 			{
