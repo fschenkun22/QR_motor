@@ -95,6 +95,18 @@ void Delay5ms()		//@12.000MHz
 	} while (--i);
 }
 
+void Delay100us()		//@12.000MHz
+{
+	unsigned char i, j;
+
+	i = 2;
+	j = 189;
+	do
+	{
+		while (--j);
+	} while (--i);
+}
+
 
 
 /*************  外部函数和变量声明 *****************/
@@ -143,6 +155,48 @@ void ToCounter(void){
 	}
 }
 
+
+
+void Beep_setup(void){
+	int i=0;
+	for(i = 0;i<4096;i++){
+		Enabled = 1;
+		Delay100us();
+		Enabled = 0;
+		Delay100us();
+	}
+
+	for(i = 0;i<1024;i++){
+		Enabled = 0;
+		Delay100us();
+		Enabled = 0;
+		Delay100us();
+	}
+
+	for(i = 0;i<1024;i++){
+		Enabled = 1;
+		Delay100us();
+		Enabled = 0;
+		Delay100us();
+	}
+
+	for(i = 0;i<512;i++){
+		Enabled = 0;
+		Delay100us();
+		Enabled = 0;
+		Delay100us();
+	}
+
+	for(i = 0;i<1024;i++){
+		Enabled = 1;
+		Delay100us();
+		Enabled = 0;
+		Delay100us();
+	}
+
+}
+
+
 //下一步开始写 按次数移动 1就调用一次move step by conter
 
 /********************* 主函数 *************************/
@@ -169,12 +223,14 @@ void main(void)
 				// MoveStepByCounter(StepConter,1);
 				B_IR_Press = 0;		//清除IR键按下标志
 				Setup = 1;
+				Beep_setup();//叫一声
 				Reset();//进入配置前先复位
 			}
 
 			while (Setup) //进入配置模式，配置模式不检测USB
 			{
-			
+				
+				
 				if(B_IR_Press){
 
 					if(IR_code == 0x43){
