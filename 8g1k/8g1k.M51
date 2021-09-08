@@ -1,0 +1,179 @@
+BL51 BANKED LINKER/LOCATER V6.22                                                        09/08/2021  23:10:19  PAGE 1
+
+
+BL51 BANKED LINKER/LOCATER V6.22, INVOKED BY:
+C:\KEIL_V5\C51\BIN\BL51.EXE uart.obj TO 8g1k RAMSIZE (256)
+
+
+MEMORY MODEL: SMALL
+
+
+INPUT MODULES INCLUDED:
+  uart.obj (UART)
+  C:\KEIL_V5\C51\LIB\C51S.LIB (?C_STARTUP)
+  C:\KEIL_V5\C51\LIB\C51S.LIB (?C?CLDPTR)
+
+
+LINK MAP OF MODULE:  8g1k (UART)
+
+
+            TYPE    BASE      LENGTH    RELOCATION   SEGMENT NAME
+            -----------------------------------------------------
+
+            * * * * * * *   D A T A   M E M O R Y   * * * * * * *
+            REG     0000H     0008H     ABSOLUTE     "REG BANK 0"
+            DATA    0008H     0012H     UNIT         ?DT?UART
+            DATA    001AH     0003H     UNIT         _DATA_GROUP_
+                    001DH     0003H                  *** GAP ***
+            BIT     0020H.0   0000H.1   UNIT         ?BI?UART
+                    0020H.1   0000H.7                *** GAP ***
+            IDATA   0021H     0001H     UNIT         ?STACK
+
+            * * * * * * *   C O D E   M E M O R Y   * * * * * * *
+            CODE    0000H     0003H     ABSOLUTE     
+                    0003H     0020H                  *** GAP ***
+            CODE    0023H     0003H     ABSOLUTE     
+                    0026H     07DAH                  *** GAP ***
+            CODE    0800H     002DH     UNIT         ?PR?UARTISR?UART
+            CODE    082DH     0025H     UNIT         ?PR?_UARTSENDSTR?UART
+            CODE    0852H     0020H     UNIT         ?PR?MAIN?UART
+            CODE    0872H     001FH     UNIT         ?CO?UART
+            CODE    0891H     0019H     UNIT         ?C?LIB_CODE
+            CODE    08AAH     0018H     UNIT         ?PR?UARTINIT?UART
+            CODE    08C2H     000CH     UNIT         ?C_C51STARTUP
+            CODE    08CEH     0008H     UNIT         ?PR?_UARTSEND?UART
+
+
+
+OVERLAY MAP OF MODULE:   8g1k (UART)
+
+
+SEGMENT                          DATA_GROUP 
+  +--> CALLED SEGMENT          START    LENGTH
+----------------------------------------------
+?C_C51STARTUP                  -----    -----
+  +--> ?PR?MAIN?UART
+
+?PR?MAIN?UART                  -----    -----
+  +--> ?PR?UARTINIT?UART
+  +--> ?CO?UART
+  +--> ?PR?_UARTSENDSTR?UART
+
+BL51 BANKED LINKER/LOCATER V6.22                                                      09/08/2021  23:10:19  PAGE 2
+
+
+?PR?_UARTSENDSTR?UART          001AH    0003H
+  +--> ?PR?_UARTSEND?UART
+
+
+
+SYMBOL TABLE OF MODULE:  8g1k (UART)
+
+  VALUE           TYPE          NAME
+  ----------------------------------
+
+  -------         MODULE        UART
+  C:0000H         SYMBOL        _ICE_DUMMY_
+  D:0080H         PUBLIC        P0
+  D:00B2H         PUBLIC        P3M0
+  D:0090H         PUBLIC        P1
+  D:00B1H         PUBLIC        P3M1
+  D:00A0H         PUBLIC        P2
+  D:00B0H         PUBLIC        P3
+  D:00C0H         PUBLIC        P4
+  D:00C8H         PUBLIC        P5
+  B:00A8H.7       PUBLIC        EA
+  D:00A8H         PUBLIC        IE
+  B:00A8H.4       PUBLIC        ES
+  D:00B8H         PUBLIC        IP
+  B:0098H.0       PUBLIC        RI
+  B:0098H.1       PUBLIC        TI
+  D:00D8H         PUBLIC        CCON
+  C:0852H         PUBLIC        main
+  C:08CEH         PUBLIC        _UartSend
+  D:0099H         PUBLIC        SBUF
+  D:0098H         PUBLIC        SCON
+  C:08AAH         PUBLIC        UartInit
+  D:0089H         PUBLIC        TMOD
+  D:0088H         PUBLIC        TCON
+  D:008EH         PUBLIC        AUXR
+  B:0020H.0       PUBLIC        busy
+  D:0008H         PUBLIC        rptr
+  D:008DH         PUBLIC        TH1
+  C:0800H         PUBLIC        UartIsr
+  D:0009H         PUBLIC        wptr
+  D:008BH         PUBLIC        TL1
+  B:0088H.6       PUBLIC        TR1
+  C:082DH         PUBLIC        _UartSendStr
+  D:00D0H         PUBLIC        PSW
+  D:000AH         PUBLIC        buffer
+  -------         PROC          UARTISR
+  C:0800H         LINE#         14
+  C:080BH         LINE#         15
+  C:080EH         LINE#         16
+  C:0810H         LINE#         17
+  C:0812H         LINE#         18
+  C:0812H         LINE#         19
+  C:0815H         LINE#         20
+  C:0817H         LINE#         21
+  C:0821H         LINE#         22
+  C:0824H         LINE#         23
+  C:0824H         LINE#         24
+BL51 BANKED LINKER/LOCATER V6.22                                                      09/08/2021  23:10:19  PAGE 3
+
+
+  -------         ENDPROC       UARTISR
+  -------         PROC          UARTINIT
+  C:08AAH         LINE#         26
+  C:08AAH         LINE#         27
+  C:08ADH         LINE#         28
+  C:08B0H         LINE#         29
+  C:08B3H         LINE#         30
+  C:08B6H         LINE#         31
+  C:08B8H         LINE#         32
+  C:08BBH         LINE#         33
+  C:08BDH         LINE#         34
+  C:08BFH         LINE#         35
+  C:08C1H         LINE#         36
+  -------         ENDPROC       UARTINIT
+  -------         PROC          _UARTSEND
+  D:0007H         SYMBOL        dat
+  C:08CEH         LINE#         38
+  C:08CEH         LINE#         39
+  C:08D1H         LINE#         40
+  C:08D3H         LINE#         41
+  C:08D5H         LINE#         42
+  -------         ENDPROC       _UARTSEND
+  -------         PROC          _UARTSENDSTR
+  D:001AH         SYMBOL        p
+  C:082DH         LINE#         44
+  C:0833H         LINE#         45
+  C:083EH         LINE#         46
+  C:083EH         LINE#         47
+  C:084FH         LINE#         48
+  C:0851H         LINE#         49
+  -------         ENDPROC       _UARTSENDSTR
+  -------         PROC          MAIN
+  C:0852H         LINE#         51
+  C:0852H         LINE#         52
+  C:0855H         LINE#         53
+  C:0857H         LINE#         55
+  C:085AH         LINE#         56
+  C:085CH         LINE#         57
+  C:085EH         LINE#         58
+  C:0867H         LINE#         60
+  C:0867H         LINE#         61
+  C:0870H         LINE#         62
+  -------         ENDPROC       MAIN
+  -------         ENDMOD        UART
+
+  -------         MODULE        ?C?CLDPTR
+  C:0891H         PUBLIC        ?C?CLDPTR
+  -------         ENDMOD        ?C?CLDPTR
+
+******************************************************************************
+* RESTRICTED VERSION WITH 0800H BYTE CODE SIZE LIMIT; USED: 00B4H BYTE ( 8%) *
+******************************************************************************
+
+Program Size: data=30.1 xdata=0 code=220
+LINK/LOCATE RUN COMPLETE.  0 WARNING(S),  0 ERROR(S)

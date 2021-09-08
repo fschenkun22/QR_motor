@@ -1,0 +1,3 @@
+"uart.obj" 
+TO "8g1k" 
+RAMSIZE(256) 

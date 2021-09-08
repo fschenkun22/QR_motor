@@ -1,0 +1,88 @@
+C51 COMPILER V9.53.0.0   UART                                                              09/08/2021 23:10:19 PAGE 1   
+
+
+C51 COMPILER V9.53.0.0, COMPILATION OF MODULE UART
+OBJECT MODULE PLACED IN uart.OBJ
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE uart.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND TABS(2)
+
+line level    source
+
+   1          #include "reg51.h"
+   2          #include "intrins.h"
+   3          
+   4          #define FOSC 11059200UL
+   5          #define BRT (65536-FOSC/115200/4)
+   6          
+   7          //****************本地变量************//
+   8          bit busy;
+   9          char wptr;
+  10          char rptr;
+  11          char buffer[16];
+  12          sbit  P_IR_RX = P5^4;   //红外
+  13          
+  14          void UartIsr() interrupt 4{
+  15   1          if(TI){
+  16   2              TI = 0;
+  17   2              busy = 0;
+  18   2          }
+  19   1          if(RI){
+  20   2              RI = 0;
+  21   2              buffer[wptr++] = SBUF;
+  22   2              wptr&=0x0f;
+  23   2          }
+  24   1      }
+  25          
+  26          void UartInit(){
+  27   1          SCON = 0x50;
+  28   1          TMOD = 0x00;
+  29   1          TL1 = BRT;
+  30   1          TH1 = BRT>>8;
+  31   1          TR1 = 1;
+  32   1          AUXR = 0x40;
+  33   1          wptr = 0x00;
+  34   1          rptr = 0x00;
+  35   1          busy = 0;
+  36   1      }
+  37          
+  38          void UartSend(char dat){
+  39   1          while(busy);
+  40   1          busy = 1;
+  41   1          SBUF = dat;
+  42   1      }
+  43          
+  44          void UartSendStr(char *p){
+  45   1          while(*p)
+  46   1          {
+  47   2              UartSend(*p++);
+  48   2          }
+  49   1      }
+  50          
+  51          void main(){
+  52   1          P3M0 = 0x00;
+  53   1          P3M1 = 0x00;
+  54   1      
+  55   1          UartInit();
+C51 COMPILER V9.53.0.0   UART                                                              09/08/2021 23:10:19 PAGE 2   
+
+  56   1          ES = 1;
+  57   1          EA = 1;
+  58   1          UartSendStr("Uart send test \r\n");
+  59   1      
+  60   1          while(1){
+  61   2              UartSendStr("test uart \r\n");
+  62   2          }
+  63   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    146    ----
+   CONSTANT SIZE    =     31    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     18       3
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      1    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
