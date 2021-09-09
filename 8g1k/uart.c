@@ -37,11 +37,19 @@ unsigned char	IR_code;			//IR code	红外键码
 
 /*************	本地函数声明	**************/
 
-unsigned char 	HEX2ASCII(unsigned char dat);
 void	InitTimer(void);
 
 
 //*************串口********************//
+
+unsigned char HEX2ASCII(unsigned char dat)
+{
+	dat &= 0x0f;
+	if(dat <= 9)	return (dat + '0');	//数字0~9
+	return (dat - 10 + 'A');			//字母A~F
+}
+
+
 void UartIsr() interrupt 4{
     if(TI){
         TI = 0;
@@ -77,6 +85,59 @@ void UartSendStr(char *p){
 }
 //**************************************
 
+
+//***************EEPROM读取**************
+void IapIdle(){
+	IAP_CONTR = 0;
+	IAP_CMD = 0;
+	IAP_TRIG = 0;
+	IAP_ADDRH = 0x80;
+	IAP_ADDRL = 0;
+}
+
+char IapRead(int addr){
+	char dat;
+
+	IAP_CONTR = 0x80;
+	IAP_TPS = 12;
+	IAP_CMD = 1;
+	IAP_ADDRL = addr;
+	IAP_ADDRH = addr>>8;
+	IAP_TRIG = 0x5a;
+	IAP_TRIG = 0Xa5;
+	_nop_();
+	dat = IAP_DATA;
+	IapIdle();
+	return dat;
+}
+
+void IapProgram(int addr,char dat){
+	IAP_CONTR = 0x80;
+	IAP_TPS = 12;
+	IAP_CMD = 2;
+	IAP_ADDRL = addr;
+	IAP_ADDRH = addr>>8;
+	IAP_DATA = dat;
+	IAP_TRIG = 0x5a;
+	IAP_TRIG = 0xa5;
+	_nop_();
+	IapIdle();
+}
+
+void IapErase(int addr){
+	IAP_CONTR = 0x80;
+	IAP_TPS = 12;
+	IAP_CMD = 3;
+	IAP_ADDRL = addr;
+	IAP_ADDRH = addr>>8;
+	IAP_TRIG = 0x5a;
+	IAP_TRIG = 0xa5;
+	_nop_();
+	IapIdle();
+}
+//********************************************
+
+
 void main(){
     P3M0 = 0x00;
     P3M1 = 0x00;
@@ -90,21 +151,57 @@ void main(){
         if(B_IR_Press){
             
             B_IR_Press = 0;		//清除IR键按下标志
-            UartSendStr("have");
+            UartSendStr("IR code :");
             UartSend(HEX2ASCII(IR_code>>4));
             UartSend(HEX2ASCII(IR_code));
-            IR_code = 0;
+
+			if(IR_code == 0x46){
+				B_IR_Press = 0;
+				UartSendStr("start program -05-\r\n");	
+				IapProgram(0xfff,0x05);
+				UartSendStr("program done!\r\n");
+				IR_code = 0;
+			}
+			
+			if(IR_code == 0x43){
+				B_IR_Press = 0;
+				UartSendStr("start program -55- \r\n");	
+				IapProgram(0xfff,0x55);
+				UartSendStr("program done!\r\n");
+				IR_code = 0;
+			}
+
+			
+			if(IR_code == 0x40){
+				B_IR_Press = 0;
+				UartSendStr("start program -aa-\r\n");	
+				IapProgram(0xfff,0xaa);
+				UartSendStr("program done!\r\n");
+				IR_code = 0;
+			}
+
+
+
+			if(IR_code == 0x44){
+				B_IR_Press = 0;
+				UartSendStr("start read:");
+				UartSend(HEX2ASCII(IapRead(0xfff)>>4));
+			    UartSend(HEX2ASCII(IapRead(0xfff)));
+				UartSendStr("\r\n");
+				IR_code = 0;
+			}
+
+			if(IR_code == 0x45){
+				B_IR_Press = 0;
+				UartSendStr("erase \r\n");
+				IapErase(0xfff);
+			}
+			
+
         }
     }
 }
 
-/********************* 十六进制转ASCII函数 *************************/
-unsigned char HEX2ASCII(unsigned char dat)
-{
-	dat &= 0x0f;
-	if(dat <= 9)	return (dat + '0');	//数字0~9
-	return (dat - 10 + 'A');			//字母A~F
-}
 
 
 

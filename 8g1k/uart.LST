@@ -1,4 +1,4 @@
-C51 COMPILER V9.53.0.0   UART                                                              09/08/2021 23:58:55 PAGE 1   
+C51 COMPILER V9.53.0.0   UART                                                              09/09/2021 23:58:23 PAGE 1   
 
 
 C51 COMPILER V9.53.0.0, COMPILATION OF MODULE UART
@@ -46,182 +46,283 @@ line level    source
   37          
   38          /*************  本地函数声明  **************/
   39          
-  40          unsigned char   HEX2ASCII(unsigned char dat);
-  41          void  InitTimer(void);
+  40          void  InitTimer(void);
+  41          
   42          
-  43          
-  44          //*************串口********************//
-  45          void UartIsr() interrupt 4{
-  46   1          if(TI){
-  47   2              TI = 0;
-  48   2              busy = 0;
-  49   2          }
-  50   1          if(RI){
-  51   2              RI = 0;
-  52   2              buffer[wptr++] = SBUF;
-  53   2              wptr&=0x0f;
-  54   2          }
-  55   1      }
-C51 COMPILER V9.53.0.0   UART                                                              09/08/2021 23:58:55 PAGE 2   
+  43          //*************串口********************//
+  44          
+  45          unsigned char HEX2ASCII(unsigned char dat)
+  46          {
+  47   1        dat &= 0x0f;
+  48   1        if(dat <= 9)  return (dat + '0'); //数字0~9
+  49   1        return (dat - 10 + 'A');      //字母A~F
+  50   1      }
+  51          
+  52          
+  53          void UartIsr() interrupt 4{
+  54   1          if(TI){
+  55   2              TI = 0;
+C51 COMPILER V9.53.0.0   UART                                                              09/09/2021 23:58:23 PAGE 2   
 
-  56          void UartInit(){
-  57   1          SCON = 0x50;
-  58   1          TMOD = 0x00;
-  59   1          TL1 = BRT;
-  60   1          TH1 = BRT>>8;
-  61   1          TR1 = 1;
-  62   1          AUXR = 0x40;
-  63   1          wptr = 0x00;
-  64   1          rptr = 0x00;
-  65   1          busy = 0;
-  66   1      }
-  67          void UartSend(char dat){
-  68   1          while(busy);
-  69   1          busy = 1;
-  70   1          SBUF = dat;
-  71   1      }
-  72          void UartSendStr(char *p){
-  73   1          while(*p)
-  74   1          {
-  75   2              UartSend(*p++);
-  76   2          }
-  77   1      }
-  78          //**************************************
-  79          
-  80          void main(){
-  81   1          P3M0 = 0x00;
-  82   1          P3M1 = 0x00;
-  83   1          InitTimer();
-  84   1          UartInit();
-  85   1          ES = 1;
-  86   1          EA = 1;
-  87   1          UartSendStr("Uart send test \r\n");
-  88   1      
-  89   1          while(1){
-  90   2              if(B_IR_Press){
-  91   3                  
-  92   3                  B_IR_Press = 0;   //清除IR键按下标志
-  93   3                  UartSendStr("have");
-  94   3                  UartSend(HEX2ASCII(IR_code>>4));
-  95   3                  UartSend(HEX2ASCII(IR_code));
-  96   3                  IR_code = 0;
-  97   3              }
-  98   2          }
-  99   1      }
- 100          
- 101          /********************* 十六进制转ASCII函数 *************************/
- 102          unsigned char HEX2ASCII(unsigned char dat)
- 103          {
- 104   1        dat &= 0x0f;
- 105   1        if(dat <= 9)  return (dat + '0'); //数字0~9
- 106   1        return (dat - 10 + 'A');      //字母A~F
- 107   1      }
- 108          
- 109          
- 110          
- 111          /******************** 红外采样时间宏定义, 用户不要随意修改  *******************/
- 112          
- 113          #if ((D_TIMER0 <= 250) && (D_TIMER0 >= 60))
- 114          #define D_IR_sample     D_TIMER0    //定义采样时间，在60us~250us之间
- 115          #endif
- 116          
- 117          #define D_IR_SYNC_MAX   (15000/D_IR_sample) //SYNC max time
-C51 COMPILER V9.53.0.0   UART                                                              09/08/2021 23:58:55 PAGE 3   
+  56   2              busy = 0;
+  57   2          }
+  58   1          if(RI){
+  59   2              RI = 0;
+  60   2              buffer[wptr++] = SBUF;
+  61   2              wptr&=0x0f;
+  62   2          }
+  63   1      }
+  64          void UartInit(){
+  65   1          SCON = 0x50;
+  66   1          TMOD = 0x00;
+  67   1          TL1 = BRT;
+  68   1          TH1 = BRT>>8;
+  69   1          TR1 = 1;
+  70   1          AUXR = 0x40;
+  71   1          wptr = 0x00;
+  72   1          rptr = 0x00;
+  73   1          busy = 0;
+  74   1      }
+  75          void UartSend(char dat){
+  76   1          while(busy);
+  77   1          busy = 1;
+  78   1          SBUF = dat;
+  79   1      }
+  80          void UartSendStr(char *p){
+  81   1          while(*p)
+  82   1          {
+  83   2              UartSend(*p++);
+  84   2          }
+  85   1      }
+  86          //**************************************
+  87          
+  88          
+  89          //***************EEPROM读取**************
+  90          void IapIdle(){
+  91   1        IAP_CONTR = 0;
+  92   1        IAP_CMD = 0;
+  93   1        IAP_TRIG = 0;
+  94   1        IAP_ADDRH = 0x80;
+  95   1        IAP_ADDRL = 0;
+  96   1      }
+  97          
+  98          char IapRead(int addr){
+  99   1        char dat;
+ 100   1      
+ 101   1        IAP_CONTR = 0x80;
+ 102   1        IAP_TPS = 12;
+ 103   1        IAP_CMD = 1;
+ 104   1        IAP_ADDRL = addr;
+ 105   1        IAP_ADDRH = addr>>8;
+ 106   1        IAP_TRIG = 0x5a;
+ 107   1        IAP_TRIG = 0Xa5;
+ 108   1        _nop_();
+ 109   1        dat = IAP_DATA;
+ 110   1        IapIdle();
+ 111   1        return dat;
+ 112   1      }
+ 113          
+ 114          void IapProgram(int addr,char dat){
+ 115   1        IAP_CONTR = 0x80;
+ 116   1        IAP_TPS = 12;
+ 117   1        IAP_CMD = 2;
+C51 COMPILER V9.53.0.0   UART                                                              09/09/2021 23:58:23 PAGE 3   
 
- 118          #define D_IR_SYNC_MIN   (9700 /D_IR_sample) //SYNC min time
- 119          #define D_IR_SYNC_DIVIDE  (12375/D_IR_sample) //decide data 0 or 1
- 120          #define D_IR_DATA_MAX   (3000 /D_IR_sample) //data max time
- 121          #define D_IR_DATA_MIN   (600  /D_IR_sample) //data min time
- 122          #define D_IR_DATA_DIVIDE  (1687 /D_IR_sample) //decide data 0 or 1
- 123          #define D_IR_BIT_NUMBER   32          //bit number
- 124          
- 125          //*******************************************************************************************
+ 118   1        IAP_ADDRL = addr;
+ 119   1        IAP_ADDRH = addr>>8;
+ 120   1        IAP_DATA = dat;
+ 121   1        IAP_TRIG = 0x5a;
+ 122   1        IAP_TRIG = 0xa5;
+ 123   1        _nop_();
+ 124   1        IapIdle();
+ 125   1      }
  126          
- 127          //**************************** IR RECEIVE MODULE ********************************************
- 128          
- 129          void IR_RX_HT6121(void)
- 130          {
- 131   1        unsigned char SampleTime;
- 132   1      
- 133   1        IR_SampleCnt++;             //Sample + 1
- 134   1      
- 135   1        F0 = P_IR_RX_temp;            //Save Last sample status
- 136   1        P_IR_RX_temp = P_IR_RX;         //Read current status
- 137   1        if(F0 && !P_IR_RX_temp)         //Last sample is high，and current sample is low, so is fall edge
- 138   1        {
- 139   2          SampleTime = IR_SampleCnt;      //get the sample time
- 140   2          IR_SampleCnt = 0;         //Clear the sample counter
- 141   2      
- 142   2             if(SampleTime > D_IR_SYNC_MAX)   B_IR_Sync = 0;  //large the Maxim SYNC time, then error
- 143   2          else if(SampleTime >= D_IR_SYNC_MIN)          //SYNC
- 144   2          {
- 145   3            if(SampleTime >= D_IR_SYNC_DIVIDE)
- 146   3            {
- 147   4              B_IR_Sync = 1;          //has received SYNC
- 148   4              IR_BitCnt = D_IR_BIT_NUMBER;  //Load bit number
- 149   4            }
- 150   3          }
- 151   2          else if(B_IR_Sync)            //has received SYNC
- 152   2          {
- 153   3            if(SampleTime > D_IR_DATA_MAX)    B_IR_Sync=0;  //data samlpe time to large
- 154   3            else
- 155   3            {
- 156   4              IR_DataShit >>= 1;          //data shift right 1 bit
- 157   4              if(SampleTime >= D_IR_DATA_DIVIDE)  IR_DataShit |= 0x80;  //devide data 0 or 1
- 158   4              if(--IR_BitCnt == 0)        //bit number is over?
- 159   4              {
- 160   5                B_IR_Sync = 0;          //Clear SYNC
- 161   5                if(~IR_DataShit == IR_data)   //判断数据正反码
- 162   5                {
- 163   6                  if((IR_UserH == (User_code / 256)) &&
- 164   6                    IR_UserL == (User_code % 256))
- 165   6                      B_IrUserErr = 0;  //User code is righe
- 166   6                  else  B_IrUserErr = 1;  //user code is wrong
- 167   6                    
- 168   6                  IR_code      = IR_data;
- 169   6                  B_IR_Press   = 1;     //数据有效
- 170   6                }
- 171   5              }
- 172   4              else if((IR_BitCnt & 7)== 0)    //one byte receive
- 173   4              {
- 174   5                IR_UserL = IR_UserH;      //Save the User code high byte
- 175   5                IR_UserH = IR_data;       //Save the User code low byte
- 176   5                IR_data  = IR_DataShit;     //Save the IR data byte
- 177   5              }
- 178   4            }
- 179   3          }
-C51 COMPILER V9.53.0.0   UART                                                              09/08/2021 23:58:55 PAGE 4   
+ 127          void IapErase(int addr){
+ 128   1        IAP_CONTR = 0x80;
+ 129   1        IAP_TPS = 12;
+ 130   1        IAP_CMD = 3;
+ 131   1        IAP_ADDRL = addr;
+ 132   1        IAP_ADDRH = addr>>8;
+ 133   1        IAP_TRIG = 0x5a;
+ 134   1        IAP_TRIG = 0xa5;
+ 135   1        _nop_();
+ 136   1        IapIdle();
+ 137   1      }
+ 138          //********************************************
+ 139          
+ 140          
+ 141          void main(){
+ 142   1          P3M0 = 0x00;
+ 143   1          P3M1 = 0x00;
+ 144   1          InitTimer();
+ 145   1          UartInit();
+ 146   1          ES = 1;
+ 147   1          EA = 1;
+ 148   1          UartSendStr("Uart send test \r\n");
+ 149   1      
+ 150   1          while(1){
+ 151   2              if(B_IR_Press){
+ 152   3                  
+ 153   3                  B_IR_Press = 0;   //清除IR键按下标志
+ 154   3                  UartSendStr("IR code :");
+ 155   3                  UartSend(HEX2ASCII(IR_code>>4));
+ 156   3                  UartSend(HEX2ASCII(IR_code));
+ 157   3      
+ 158   3            if(IR_code == 0x46){
+ 159   4              B_IR_Press = 0;
+ 160   4              UartSendStr("start program -05-\r\n");  
+ 161   4              IapProgram(0xfff,0x05);
+ 162   4              UartSendStr("program done!\r\n");
+ 163   4              IR_code = 0;
+ 164   4            }
+ 165   3            
+ 166   3            if(IR_code == 0x43){
+ 167   4              B_IR_Press = 0;
+ 168   4              UartSendStr("start program -55- \r\n"); 
+ 169   4              IapProgram(0xfff,0x55);
+ 170   4              UartSendStr("program done!\r\n");
+ 171   4              IR_code = 0;
+ 172   4            }
+ 173   3      
+ 174   3            
+ 175   3            if(IR_code == 0x40){
+ 176   4              B_IR_Press = 0;
+ 177   4              UartSendStr("start program -aa-\r\n");  
+ 178   4              IapProgram(0xfff,0xaa);
+ 179   4              UartSendStr("program done!\r\n");
+C51 COMPILER V9.53.0.0   UART                                                              09/09/2021 23:58:23 PAGE 4   
 
- 180   2        }
- 181   1      }
- 182          
- 183          
- 184          /**************** Timer初始化函数 ******************************/
- 185          void InitTimer(void)
- 186          {
- 187   1        TMOD = 0;   //for STC15Fxxx系列 Timer0 as 16bit reload timer.
- 188   1        TH0 = Timer0_Reload / 256;
- 189   1        TL0 = Timer0_Reload % 256;
- 190   1        ET0 = 1;
- 191   1        TR0 = 1;
- 192   1      
- 193   1        EA  = 1;
- 194   1      }
- 195          
- 196          
- 197          /********************** Timer0中断函数************************/
- 198          void timer0 (void) interrupt 1
- 199          {
- 200   1        IR_RX_HT6121();
- 201   1      }
- 202          
- 203          
+ 180   4              IR_code = 0;
+ 181   4            }
+ 182   3      
+ 183   3      
+ 184   3      
+ 185   3            if(IR_code == 0x44){
+ 186   4              B_IR_Press = 0;
+ 187   4              UartSendStr("start read:");
+ 188   4              UartSend(HEX2ASCII(IapRead(0xfff)>>4));
+ 189   4                UartSend(HEX2ASCII(IapRead(0xfff)));
+ 190   4              UartSendStr("\r\n");
+ 191   4              IR_code = 0;
+ 192   4            }
+ 193   3      
+ 194   3            if(IR_code == 0x45){
+ 195   4              B_IR_Press = 0;
+ 196   4              UartSendStr("erase \r\n");
+ 197   4              IapErase(0xfff);
+ 198   4            }
+ 199   3            
+ 200   3      
+ 201   3              }
+ 202   2          }
+ 203   1      }
  204          
+ 205          
+ 206          
+ 207          
+ 208          /******************** 红外采样时间宏定义, 用户不要随意修改  *******************/
+ 209          
+ 210          #if ((D_TIMER0 <= 250) && (D_TIMER0 >= 60))
+ 211          #define D_IR_sample     D_TIMER0    //定义采样时间，在60us~250us之间
+ 212          #endif
+ 213          
+ 214          #define D_IR_SYNC_MAX   (15000/D_IR_sample) //SYNC max time
+ 215          #define D_IR_SYNC_MIN   (9700 /D_IR_sample) //SYNC min time
+ 216          #define D_IR_SYNC_DIVIDE  (12375/D_IR_sample) //decide data 0 or 1
+ 217          #define D_IR_DATA_MAX   (3000 /D_IR_sample) //data max time
+ 218          #define D_IR_DATA_MIN   (600  /D_IR_sample) //data min time
+ 219          #define D_IR_DATA_DIVIDE  (1687 /D_IR_sample) //decide data 0 or 1
+ 220          #define D_IR_BIT_NUMBER   32          //bit number
+ 221          
+ 222          //*******************************************************************************************
+ 223          
+ 224          //**************************** IR RECEIVE MODULE ********************************************
+ 225          
+ 226          void IR_RX_HT6121(void)
+ 227          {
+ 228   1        unsigned char SampleTime;
+ 229   1      
+ 230   1        IR_SampleCnt++;             //Sample + 1
+ 231   1      
+ 232   1        F0 = P_IR_RX_temp;            //Save Last sample status
+ 233   1        P_IR_RX_temp = P_IR_RX;         //Read current status
+ 234   1        if(F0 && !P_IR_RX_temp)         //Last sample is high，and current sample is low, so is fall edge
+ 235   1        {
+ 236   2          SampleTime = IR_SampleCnt;      //get the sample time
+ 237   2          IR_SampleCnt = 0;         //Clear the sample counter
+ 238   2      
+ 239   2             if(SampleTime > D_IR_SYNC_MAX)   B_IR_Sync = 0;  //large the Maxim SYNC time, then error
+ 240   2          else if(SampleTime >= D_IR_SYNC_MIN)          //SYNC
+ 241   2          {
+C51 COMPILER V9.53.0.0   UART                                                              09/09/2021 23:58:23 PAGE 5   
 
+ 242   3            if(SampleTime >= D_IR_SYNC_DIVIDE)
+ 243   3            {
+ 244   4              B_IR_Sync = 1;          //has received SYNC
+ 245   4              IR_BitCnt = D_IR_BIT_NUMBER;  //Load bit number
+ 246   4            }
+ 247   3          }
+ 248   2          else if(B_IR_Sync)            //has received SYNC
+ 249   2          {
+ 250   3            if(SampleTime > D_IR_DATA_MAX)    B_IR_Sync=0;  //data samlpe time to large
+ 251   3            else
+ 252   3            {
+ 253   4              IR_DataShit >>= 1;          //data shift right 1 bit
+ 254   4              if(SampleTime >= D_IR_DATA_DIVIDE)  IR_DataShit |= 0x80;  //devide data 0 or 1
+ 255   4              if(--IR_BitCnt == 0)        //bit number is over?
+ 256   4              {
+ 257   5                B_IR_Sync = 0;          //Clear SYNC
+ 258   5                if(~IR_DataShit == IR_data)   //判断数据正反码
+ 259   5                {
+ 260   6                  if((IR_UserH == (User_code / 256)) &&
+ 261   6                    IR_UserL == (User_code % 256))
+ 262   6                      B_IrUserErr = 0;  //User code is righe
+ 263   6                  else  B_IrUserErr = 1;  //user code is wrong
+ 264   6                    
+ 265   6                  IR_code      = IR_data;
+ 266   6                  B_IR_Press   = 1;     //数据有效
+ 267   6                }
+ 268   5              }
+ 269   4              else if((IR_BitCnt & 7)== 0)    //one byte receive
+ 270   4              {
+ 271   5                IR_UserL = IR_UserH;      //Save the User code high byte
+ 272   5                IR_UserH = IR_data;       //Save the User code low byte
+ 273   5                IR_data  = IR_DataShit;     //Save the IR data byte
+ 274   5              }
+ 275   4            }
+ 276   3          }
+ 277   2        }
+ 278   1      }
+ 279          
+ 280          
+ 281          /**************** Timer初始化函数 ******************************/
+ 282          void InitTimer(void)
+ 283          {
+ 284   1        TMOD = 0;   //for STC15Fxxx系列 Timer0 as 16bit reload timer.
+ 285   1        TH0 = Timer0_Reload / 256;
+ 286   1        TL0 = Timer0_Reload % 256;
+ 287   1        ET0 = 1;
+ 288   1        TR0 = 1;
+ 289   1      
+ 290   1        EA  = 1;
+ 291   1      }
+ 292          
+ 293          
+ 294          /********************** Timer0中断函数************************/
+ 295          void timer0 (void) interrupt 1
+ 296          {
+ 297   1        IR_RX_HT6121();
+ 298   1      }
+ 299          
+ 300          
+ 301          
+
+
+C51 COMPILER V9.53.0.0   UART                                                              09/09/2021 23:58:23 PAGE 6   
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    356    ----
-   CONSTANT SIZE    =     23    ----
+   CODE SIZE        =    619    ----
+   CONSTANT SIZE    =    132    ----
    XDATA SIZE       =   ----    ----
    PDATA SIZE       =   ----    ----
    DATA SIZE        =     25       3
