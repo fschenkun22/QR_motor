@@ -37,6 +37,7 @@ HEX文件在本目录的/list里面。
 
 /*************	以下宏定义用户请勿修改	**************/
 #include	"reg51.H"
+#include "intrins.h"
 #define	uchar	unsigned char
 #define uint	unsigned int
 
@@ -74,7 +75,7 @@ bit		B_IR_Press;			//Key press flag,include repeat key.
 uchar	IR_code;			//IR code	红外键码
 
 bit 	CounterStatus;//计数器到位状态
-uchar 	Counter;
+int 	Counter;
 /*************	本地函数声明	**************/
 void	Tx1Send(uchar dat);
 uchar	HEX2ASCII(uchar dat);
@@ -110,61 +111,29 @@ void Delay100us()		//@12.000MHz
 
 
 /*************  外部函数和变量声明 *****************/
-void IntStart(void){
-	P5M0 = 0;
-	P5M1 = 0;
-	P3M0 = 0;
-	P3M1 = 0;
-	Enabled = 0;
-	CounterStatus = 1;
-	Counter = 0;
-	Setup = 0;
-}
-
-void MoveStep(void){
-	STEP = 0;
-	Delay5ms();
-	STEP = 1;
-	Delay5ms();
-}
-
-void MoveStepByCounter(cont,dir){
-	DIR = dir;
-
-	while(cont){
-		MoveStep();
-		cont--;
-	}
-}
-
-void Reset(void){
-	while(Senser==0){
-		DIR = 0;//往回移动
-		STEP = 0;
-		Delay5ms();
-		STEP = 1;
-		Delay5ms();
-	}
-	//直到检测到传感器复位了
-}
-
-void ToCounter(void){
-	uchar i = Counter;
-	for(i=Counter; i>0;i--){
-		MoveStepByCounter(StepConter,1);
-	}
-}
-
-
-
-void Beep_setup(void){
-	int i=0;
-	for(i = 0;i<4096;i++){
+void Beep_save(void){
+	int i = 0;
+		for(i = 0;i<4096;i++){
 		Enabled = 1;
 		Delay100us();
 		Enabled = 0;
 		Delay100us();
 	}
+	Enabled = 1;//禁止输出
+}
+
+void Beep_short(void){
+		int i = 0;
+		for(i = 0;i<1024;i++){
+		Enabled = 1;
+		Delay100us();
+		Enabled = 0;
+		Delay100us();
+	}
+}
+
+void Beep_setup(void){
+	int i=0;
 
 	for(i = 0;i<1024;i++){
 		Enabled = 0;
@@ -193,8 +162,117 @@ void Beep_setup(void){
 		Enabled = 0;
 		Delay100us();
 	}
+	Enabled = 1;//禁止输出
 
 }
+
+//***************EEPROM读取**************
+void IapIdle(){
+	IAP_CONTR = 0;
+	IAP_CMD = 0;
+	IAP_TRIG = 0;
+	IAP_ADDRH = 0x80;
+	IAP_ADDRL = 0;
+}
+
+char IapRead(int addr){
+	char dat;
+
+	IAP_CONTR = 0x80;
+	IAP_TPS = 12;
+	IAP_CMD = 1;
+	IAP_ADDRL = addr;
+	IAP_ADDRH = addr>>8;
+	IAP_TRIG = 0x5a;
+	IAP_TRIG = 0Xa5;
+	_nop_();
+	dat = IAP_DATA;
+	IapIdle();
+	return dat;
+}
+
+void IapProgram(int addr,char dat){
+	IAP_CONTR = 0x80;
+	IAP_TPS = 12;
+	IAP_CMD = 2;
+	IAP_ADDRL = addr;
+	IAP_ADDRH = addr>>8;
+	IAP_DATA = dat;
+	IAP_TRIG = 0x5a;
+	IAP_TRIG = 0xa5;
+	_nop_();
+	IapIdle();
+}
+
+void IapErase(int addr){
+	IAP_CONTR = 0x80;
+	IAP_TPS = 12;
+	IAP_CMD = 3;
+	IAP_ADDRL = addr;
+	IAP_ADDRH = addr>>8;
+	IAP_TRIG = 0x5a;
+	IAP_TRIG = 0xa5;
+	_nop_();
+	IapIdle();
+}
+//********************************************
+
+void IntStart(void){
+	P5M0 = 0;
+	P5M1 = 0;
+	P3M0 = 0;
+	P3M1 = 0;
+	Enabled = 1;//禁止输出
+	CounterStatus = 1;
+	Counter = 0;
+	Setup = 0;
+
+}
+
+void MoveStep(void){
+	STEP = 0;
+	Delay5ms();
+	STEP = 1;
+	Delay5ms();
+}
+
+void MoveStepByCounter(cont,dir){
+	DIR = dir;
+	Enabled = 0;
+	while(cont){
+		MoveStep();
+		cont--;
+	}
+}
+
+void Reset(void){
+	Enabled = 0;//允许输出
+	while(Senser==0){
+		DIR = 0;//往回移动
+		STEP = 0;
+		Delay5ms();
+		STEP = 1;
+		Delay5ms();
+	}
+	//直到检测到传感器复位了
+	Enabled = 1;//禁止输出
+}
+
+void ToCounter(void){
+	int i;
+	DIR = 1;
+	Enabled = 0;
+	Beep_short();
+	for(i = IapRead(0xfff); i>0;i--){
+		
+		MoveStepByCounter(StepConter,1);
+	}
+}
+
+
+
+
+
 
 
 //下一步开始写 按次数移动 1就调用一次move step by conter
@@ -204,6 +282,7 @@ void main(void)
 {
 	InitTimer();		//初始化Timer
 	IntStart();
+
 	//复位后检查是否按setup
 	// if(B_IR_Press){
 	// 	if(IR_code == 0x46){
@@ -230,7 +309,7 @@ void main(void)
 			while (Setup) //进入配置模式，配置模式不检测USB
 			{
 				
-				
+				Enabled = 0;//允许输出
 				if(B_IR_Press){
 
 					if(IR_code == 0x43){
@@ -245,6 +324,9 @@ void main(void)
 						MoveStepByCounter(StepConter,0);
 						B_IR_Press = 0;		//清除IR键按下标志
 						Counter--;//注意这里应该限制负值！！！
+						if(Counter<0){
+							Counter = 0;
+						}
 					}
 
 					if(IR_code == 0x46){
@@ -254,9 +336,12 @@ void main(void)
 						//如果是46 证明按下的是mode按键，准备退出配置
 
 						//退出前保存counter
-
+						IapErase(0xfff);//保存前先擦除
+						Beep_save();
+						IapProgram(0xfff,Counter);
 						//退出前运行复位
 						Reset();
+						Enabled = 1;//禁止输出
 					}
 
 				}
@@ -265,7 +350,7 @@ void main(void)
 		}
 
 		//接下来判断USB，也就是正常工作模式，USB如果为0 说明插入设备，就运行到counter，如果设备为1，就复位等待
-		if (USB==0)
+		if (USB==0)//0为USB插入
 		{
 			//如果USB接触不良，马上断开再接通可能出现继续出仓，所以应该加上强制复位后再出仓
 			Reset();
@@ -273,6 +358,7 @@ void main(void)
 			while (USB==0)
 			{
 				//原地等待 
+				Enabled = 1;//禁止输出
 			}
 		}
 
